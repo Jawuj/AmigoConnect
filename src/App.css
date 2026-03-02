@@ -1,0 +1,203 @@
+header {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #222;
+}
+
+/* Encabezado */
+
+.encabezado {
+  background-color: #026888;
+  /* azul clarito */
+  height: 70px;
+  /* altura solicitada */
+  display: flex;
+  align-items: center;
+  gap: 50px;
+  /* centra verticalmente el contenido dentro del header */
+  padding: 0 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  /* ligera sombra */
+
+}
+
+.encabezado-titulo-principal {
+  height: 70px;
+  /* altura solicitada */
+  background-color: #026888;
+  color: white;
+  /* azul clarito */
+  padding: 0 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  /* ligera sombra */
+  text-align: left;
+  /* texto alineado a la izquierda */
+}
+
+
+.encabezado-barra-de-busqueda {
+  max-width: 100%;
+  flex: 1;
+  margin-right: 100px;
+}
+
+.buscar_proyectos {
+  --c-text: rgb(50, 50, 80);
+  --c-bg: rgb(252, 252, 252);
+  --c-outline: rgb(55, 45, 190);
+  display: grid;
+  gap: 1ch;
+  max-width: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: black;
+  margin: 0 auto;
+  top: 10px;
+  width: 100%;
+
+}
+
+.campo_de_busqueda_proyectos {
+  padding: 0.5em 0.75em;
+  border-radius: 0.2em;
+  border: 1px solid var(--c-border, currentColor);
+  color: var(--c-text);
+  font-size: 1rem;
+  letter-spacing: 0.1ch;
+  width: 100%;
+}
+
+.campo_de_busqueda_proyectos:not(:placeholder-shown)+.input-label {
+  transform: translateY(-220%);
+  opacity: 1;
+}
+
+.campo_de_busqueda_proyectos:invalid {
+  --c-border: rgb(230, 85, 60);
+  --c-text: rgb(230, 85, 60);
+  --c-outline: rgb(230, 85, 60);
+}
+
+.campo_de_busqueda_proyectos:is(:disabled, :read-only) {
+  --c-border: rgb(150, 150, 150);
+  --c-text: rgb(170, 170, 170);
+}
+
+.campo_de_busqueda_proyectos:is(:focus, :focus-visible) {
+  outline: 2px solid var(--c-outline);
+  outline-offset: 2px;
+}
+
+.encabezado-filtros {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.filtros-titulo {
+  font-size: 20px;
+  color: white;
+}
+
+.opcion-semestre {
+  background: #17a2b8;
+  color: white;
+  padding: 5px;
+  cursor: pointer;
+}
+
+
+.semestres-lista {
+  background: #17a2b8;
+  color: white;
+  padding: 5px;
+  cursor: pointer;
+}
+
+
+
+
+/* Contenido centrado con sombra ligera */
+.contenido_pagina_principal {
+  max-width: 1500px;
+  /* ancho máximo centrado */
+  margin: 30px auto;
+  /* centra horizontalmente y separa del header */
+  padding: 24px;
+  background: #ffffff;
+  /* fondo blanco para que la sombra se aprecie */
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  /* sombra un poco más marcada */
+  border-radius: 8px;
+}
+
+/* Ajustes de texto dentro del contenido */
+.contenido_pagina_principal h3,
+.contenido_pagina_principal p {
+  margin: 0 0 12px 0;
+  color: #222;
+  text-align: center;
+}
+
+.boton_añadir_proyecto {
+  background: var(--color-back);
+  border-radius: 30%;
+
+  border: solid 2px #ee7b09;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0.7em 1.7em;
+  outline: none;
+  transition: all 0.3s;
+  user-select: none;
+  position: absolute;
+  right: 30px;
+  bottom: 30px;
+  transition: transform 0.4s ease;
+  background-color: #fd7e14;
+  z-index: 1;
+}
+
+;
+
+.boton_añadir_proyecto:hover {
+
+  transform: scale(1.1);
+}
+
+
+
+.text_boton_añadir_proyecto {
+  color: white;
+  font-weight: 700;
+  margin: auto;
+  transition: all 0.3s;
+  width: fit-content;
+  font-size: 30px;
+}
+
+.boton_añadir_proyecto:hover .text_boton_añadir_proyecto {
+  transform: scale(1.5);
+}
+
+.footer {
+  background-color: #026888;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  gap: 50px;
+  padding: 0 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+}
+
+.footer-contenido {
+  display: flex;
+  align-items: center;
+  gap: 50px;
+  padding: 0 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
