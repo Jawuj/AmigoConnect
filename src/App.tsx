@@ -5,7 +5,7 @@ function App() {
       <>
       <header className="encabezado">
         <div className="encabezado-titulo-principal">
-            <h2>AmigoConectado</h2>
+            <h2>AmigoConect</h2>
         </div>
         <div className="encabezado-barra-de-busqueda">
             <p className="buscar_proyectos">
