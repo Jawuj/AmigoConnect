@@ -16,11 +16,12 @@
 }
 
 .filter-label {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.75rem;
-    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
+    margin-bottom: 2px;
 }
 
 .semester-filter {
@@ -97,16 +98,19 @@
 }
 
 .tag-clear {
-    background: none;
-    border: none;
-    color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
     font-size: 0.8rem;
     cursor: pointer;
-    text-decoration: underline;
-    padding: 5px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    transition: all 0.2s;
+    font-weight: 600;
 }
 
 .tag-clear:hover {
+    background: rgba(255, 255, 255, 0.2);
     color: white;
 }
 
@@ -421,4 +425,143 @@
         opacity: 1;
         transform: translateY(0) scale(1);
     }
+}
+
+.validate-card-btn {
+    position: absolute;
+    bottom: 15px;
+    right: 55px;
+    /* Offset to not overlap with edit button if both present */
+    background: #28a745;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.validate-card-btn:hover {
+    background: #218838;
+    transform: scale(1.1);
+}
+
+.validate-card-btn.unvalidate {
+    background: #dc3545;
+}
+
+.validate-card-btn.unvalidate:hover {
+    background: #c82333;
+}
+
+.filter-select {
+    padding: 8px 15px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 0.9rem;
+    color: white;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.filter-select option {
+    background: #003747;
+    /* Slightly darker than primary for better dropdown read */
+    color: white;
+}
+
+.filter-select:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.opportunities-view {
+    padding: 20px;
+    animation: fadeIn 0.4s ease;
+}
+
+.opps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.opp-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.opp-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+.opp-header {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.company-logo-small {
+    width: 48px;
+    height: 48px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.2rem;
+    overflow: hidden;
+}
+
+.opp-title {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-dark);
+}
+
+.opp-company {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.opp-body p {
+    font-size: 0.95rem;
+    color: #555;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.opp-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 15px 0;
+}
+
+.opp-tag {
+    background: rgba(10, 110, 189, 0.05);
+    color: var(--primary-color);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
 }

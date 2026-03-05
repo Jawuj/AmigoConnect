@@ -26,20 +26,24 @@ function App() {
     const [activeCategories, setActiveCategories] = useState([]); // Array para multi-selección
     const [activeSemester, setActiveSemester] = useState('Todos');
     const [activeStatus, setActiveStatus] = useState('Todos');
+    const [activeValidationFilter, setActiveValidationFilter] = useState('Todos'); // 'Todos' | 'Validados' | 'Pendientes'
 
     const [user, setUser] = useState(null);
     const [profile, setProfile] = useState(null);
+    const [userRole, setUserRole] = useState(null); // 'student' | 'teacher' | 'company'
     const [authLoading, setAuthLoading] = useState(true);
     const [projects, setProjects] = useState([]);
+    const [opportunities, setOpportunities] = useState([]); // Nuevas vacantes
     const [users, setUsers] = useState({}); // Mapa de todos los usuarios por ID
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [editingProject, setEditingProject] = useState(null); // Proyecto que estamos editando
 
     // Gestión de Vistas
-    const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'profile' | 'details'
+    const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'profile' | 'details' | 'opportunities'
     const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [isOppModalOpen, setIsOppModalOpen] = useState(false);
 
     const mainFilters = ['Todos', 'Tecnología', 'Ingeniería'];
     const projectCategories = ['Web', 'Móvil', 'IA', 'IoT', 'Ciberseguridad', 'Data Science'];
@@ -49,20 +53,43 @@ function App() {
     // 0. Manejar estado de autenticación
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            setUser(currentUser);
-            if (currentUser) {
-                // Verificar si tiene perfil en Firestore
-                const docRef = doc(db, "users", currentUser.uid);
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setProfile(docSnap.data());
+            try {
+                setUser(currentUser);
+                if (currentUser) {
+                    const email = currentUser.email;
+                    const domain = email.substring(email.lastIndexOf("@"));
+
+                    // 1. Verificar roles en paralelo para mayor velocidad
+                    const [teacherSnap, companySnap] = await Promise.all([
+                        getDoc(doc(db, "whitelist_teachers", email)),
+                        getDoc(doc(db, "whitelist_companies", domain))
+                    ]);
+
+                    let assignedRole = 'student';
+                    if (teacherSnap.exists()) {
+                        assignedRole = 'teacher';
+                    } else if (companySnap.exists()) {
+                        assignedRole = 'company';
+                    }
+
+                    setUserRole(assignedRole);
+
+                    // 2. Obtener perfil
+                    const docSnap = await getDoc(doc(db, "users", currentUser.uid));
+                    if (docSnap.exists()) {
+                        setProfile(docSnap.data());
+                    } else {
+                        setProfile(null);
+                    }
                 } else {
                     setProfile(null);
+                    setUserRole(null);
                 }
-            } else {
-                setProfile(null);
+            } catch (error) {
+                console.error("Error en el listener de autenticación:", error);
+            } finally {
+                setAuthLoading(false);
             }
-            setAuthLoading(false);
         });
         return () => unsubscribe();
     }, []);
@@ -97,10 +124,41 @@ function App() {
         });
         return () => unsubscribeProjects();
     }, []);
+    // 3. Escuchar Oportunidades en tiempo real
+    useEffect(() => {
+        const qOpps = query(collection(db, "opportunities"));
+        const unsubscribeOpps = onSnapshot(qOpps, (snapshot) => {
+            const oppsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            setOpportunities(oppsData);
+        });
+        return () => unsubscribeOpps();
+    }, []);
 
     const handleLogin = async () => {
         try {
-            await signInWithPopup(auth, googleProvider);
+            const result = await signInWithPopup(auth, googleProvider);
+            const email = result.user.email;
+            const domain = email.substring(email.lastIndexOf("@"));
+
+            // 1. Validar dominios permitidos
+            // Permitimos: @amigo.edu.co, soporte, o dominios en whitelist_companies
+            const companyWhitelistRef = doc(db, "whitelist_companies", domain);
+            const companyWhitelistSnap = await getDoc(companyWhitelistRef);
+
+            const isInstitutional = email.endsWith('@amigo.edu.co');
+            const isSupport = email === 'amigoconnect.support@gmail.com';
+            const isAuthorizedCompany = companyWhitelistSnap.exists();
+
+            if (!isInstitutional && !isSupport && !isAuthorizedCompany) {
+                alert("Acceso denegado. Este correo o dominio no está autorizado.");
+                await signOut(auth);
+                return;
+            }
+
+            // El resto se maneja en el listener onAuthStateChanged
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
         }
@@ -110,14 +168,17 @@ function App() {
     const handleOnboardingSubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
+        const selectedRole = formData.get('role') || userRole; // Prioridad al del form
+
         const newProfile = {
             uid: user.uid,
-            DocumentID: user.uid, // Usamos el UID como DocumentID para consistencia
+            DocumentID: user.uid,
             name: user.displayName,
             mail: user.email,
+            role: selectedRole,
             dni: formData.get('dni'),
             program: formData.get('program'),
-            semester: formData.get('semester'),
+            semester: formData.get('semester') || "N/A",
             github: formData.get('github'),
             avatarUrl: user.photoURL || "",
             createdAt: new Date().toISOString()
@@ -177,6 +238,10 @@ function App() {
                 mainFilter: formData.get('mainFilter') || 'Tecnología',
                 category: formData.get('category'),
                 problemSolved: formData.get('problemSolved'),
+                targetAudience: formData.get('targetAudience'),
+                techArchitecture: formData.get('techArchitecture'),
+                license: formData.get('license'),
+                team: formData.get('team'),
                 semester: Number(formData.get('semester')),
                 status: formData.get('status'),
                 techStack: formData.get('techStack').split(',').map(item => item.trim()),
@@ -203,6 +268,45 @@ function App() {
             alert("Hubo un error. Intenta de nuevo.");
         } finally {
             setIsUploading(false);
+        }
+    };
+
+    const handleToggleValidation = async (project) => {
+        if (userRole !== 'teacher') return;
+        try {
+            await updateDoc(doc(db, "projects", project.id), {
+                isValidated: !project.isValidated,
+                validatedBy: project.isValidated ? null : user.uid,
+                validatedAt: project.isValidated ? null : serverTimestamp()
+            });
+            alert(project.isValidated ? "Validación removida" : "Proyecto validado correctamente");
+        } catch (error) {
+            console.error("Error al cambiar validación:", error);
+            alert("No se pudo procesar la solicitud");
+        }
+    };
+
+    const handleOppSubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        try {
+            const oppData = {
+                title: formData.get('title'),
+                company: profile?.name || user.displayName,
+                companyId: user.uid,
+                description: formData.get('description'),
+                modality: formData.get('modality'),
+                type: formData.get('type'),
+                salary: formData.get('salary'),
+                location: formData.get('location'),
+                createdAt: serverTimestamp()
+            };
+            await addDoc(collection(db, "opportunities"), oppData);
+            alert("¡Oportunidad publicada!");
+            setIsOppModalOpen(false);
+        } catch (error) {
+            console.error("Error al publicar vacante:", error);
+            alert("Error al publicar");
         }
     };
 
@@ -235,7 +339,7 @@ function App() {
                 <div className="login-card">
                     <div className="login-logo">
                         <img src="./UniversityIsotipo.png" alt="Logo" />
-                        <h2>AmigoConect</h2>
+                        <h2>AmigoConnect</h2>
                     </div>
                     <h1>Bienvenido a la red de proyectos</h1>
                     <p>Conéctate con otros estudiantes y comparte tu ingenio.</p>
@@ -244,7 +348,7 @@ function App() {
                         Entrar con cuenta institucional
                     </button>
                     <footer className="login-footer">
-                        AmigoConect © 2026
+                        AmigoConnect © 2026
                     </footer>
                 </div>
             </div>
@@ -260,6 +364,14 @@ function App() {
                     <p>Completa tu perfil para empezar a explorar y publicar proyectos.</p>
                     <form className="onboarding-form" onSubmit={handleOnboardingSubmit}>
                         <div className="form-group">
+                            <label>Tipo de Usuario</label>
+                            <select name="role" required>
+                                <option value="student">Estudiante</option>
+                                <option value="graduate">Egresado</option>
+                                <option value="company">Empresa / Reclutador</option>
+                            </select>
+                        </div>
+                        <div className="form-group">
                             <label>DNI / Documento</label>
                             <input type="text" name="dni" placeholder="Ej: 123456789" required />
                         </div>
@@ -272,10 +384,12 @@ function App() {
                             </select>
                         </div>
                         <div className="form-row">
-                            <div className="form-group">
-                                <label>Semestre Actual</label>
-                                <input type="number" name="semester" min="1" max="10" placeholder="1-10" required />
-                            </div>
+                            {userRole === 'student' && (
+                                <div className="form-group">
+                                    <label>Semestre Actual</label>
+                                    <input type="number" name="semester" min="1" max="10" placeholder="1-10" required />
+                                </div>
+                            )}
                             <div className="form-group">
                                 <label>GitHub (Opcional)</label>
                                 <input type="url" name="github" placeholder="https://github.com/usuario" />
@@ -293,7 +407,12 @@ function App() {
             <header className="dashboard-header">
                 <div className="logo-container" onClick={goToDashboard} style={{ cursor: 'pointer' }}>
                     <span className="logo-icon"><img src="./UniversityIsotipo.png" alt="Logo" /></span>
-                    <span className="logo-text">AmigoConect</span>
+                    <span className="logo-text">AmigoConnect</span>
+                </div>
+
+                <div className="header-nav">
+                    <button className={`nav-link ${activeView === 'dashboard' ? 'active' : ''}`} onClick={goToDashboard}>Inicio</button>
+                    <button className={`nav-link ${activeView === 'opportunities' ? 'active' : ''}`} onClick={() => setActiveView('opportunities')}>Oportunidades</button>
                 </div>
 
                 <div className="search-container">
@@ -339,26 +458,45 @@ function App() {
 
                         <div className="filter-group">
                             <label className="filter-label">Semestre:</label>
-                            <select
-                                className="semester-select"
-                                value={activeSemester}
-                                onChange={(e) => setActiveSemester(e.target.value)}
-                            >
-                                {semesters.map(s => (
-                                    <option key={s} value={s}>{s === 'Todos' ? 'Todos' : `Semestre ${s}`}</option>
-                                ))}
-                            </select>
+                            <div className="semester-filter">
+                                <select
+                                    className="semester-select"
+                                    value={activeSemester}
+                                    onChange={(e) => setActiveSemester(e.target.value)}
+                                >
+                                    {semesters.map(s => (
+                                        <option key={s} value={s}>{s === 'Todos' ? 'Todos' : `Semestre ${s}`}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
                         <div className="filter-group">
                             <label className="filter-label">Estado:</label>
-                            <select
-                                className="semester-select"
-                                value={activeStatus}
-                                onChange={(e) => setActiveStatus(e.target.value)}
-                            >
-                                {statuses.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
+                            <div className="semester-filter">
+                                <select
+                                    className="semester-select"
+                                    value={activeStatus}
+                                    onChange={(e) => setActiveStatus(e.target.value)}
+                                >
+                                    {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className="filter-group">
+                            <label className="filter-label">Validación:</label>
+                            <div className="semester-filter">
+                                <select
+                                    value={activeValidationFilter}
+                                    onChange={(e) => setActiveValidationFilter(e.target.value)}
+                                    className="semester-select"
+                                >
+                                    <option value="Todos">Todos</option>
+                                    <option value="Validados">Validados</option>
+                                    <option value="Pendientes">Pendientes</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div className="filter-group" style={{ flexGrow: 1 }}>
@@ -400,7 +538,10 @@ function App() {
                                 const matchSemester = activeSemester === 'Todos' || String(project.semester) === activeSemester;
                                 const matchStatus = activeStatus === 'Todos' || project.status === activeStatus;
                                 const matchCategory = activeCategories.length === 0 || activeCategories.includes(project.category);
-                                return matchMain && matchSemester && matchStatus && matchCategory;
+                                const matchValidation = activeValidationFilter === 'Todos' ||
+                                    (activeValidationFilter === 'Validados' && project.isValidated) ||
+                                    (activeValidationFilter === 'Pendientes' && !project.isValidated);
+                                return matchMain && matchSemester && matchStatus && matchCategory && matchValidation;
                             });
 
                             if (filteredProjects.length === 0) {
@@ -412,6 +553,7 @@ function App() {
                                             setActiveSemester('Todos');
                                             setActiveStatus('Todos');
                                             setActiveCategories([]);
+                                            setActiveValidationFilter('Todos');
                                         }}>Limpiar Filtros</button>
                                     </div>
                                 );
@@ -447,6 +589,18 @@ function App() {
                                                             <Icons.Edit />
                                                         </button>
                                                     )}
+                                                    {userRole === 'teacher' && (
+                                                        <button
+                                                            className={`validate-card-btn ${project.isValidated ? 'unvalidate' : ''}`}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleToggleValidation(project);
+                                                            }}
+                                                            title={project.isValidated ? "Quitar Validación" : "Validar Proyecto"}
+                                                        >
+                                                            <Icons.Check />
+                                                        </button>
+                                                    )}
                                                 </div>
                                                 <div className="card-body">
                                                     <h3 className="card-title">{project.title}</h3>
@@ -456,8 +610,7 @@ function App() {
                                                             {Array.isArray(project.techStack) ? project.techStack.slice(0, 3).join(', ') : project.techStack}
                                                         </small>
                                                         {project.demoUrl && (
-                                                            <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="demo-link-small" onClick={(e) => e.stopPropagation()}>
-                                                                <Icons.Rocket /> Demo
+                                                            <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="demo-link-small" onClick={(e) => e.stopPropagation()}>Demo
                                                             </a>
                                                         )}
                                                     </div>
@@ -486,6 +639,52 @@ function App() {
                         })()}
                     </main>
                 </>
+            )}
+
+            {activeView === 'opportunities' && (
+                <div className="opportunities-view">
+                    <div className="section-header">
+                        <h2 className="section-title">Oportunidades Laborales y Prácticas</h2>
+                        {userRole === 'company' && (
+                            <button className="primary-action-btn" onClick={() => setIsOppModalOpen(true)}>
+                                <Icons.Plus /> Publicar Vacante
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="opps-grid">
+                        {opportunities.length === 0 ? (
+                            <div className="empty-state">
+                                <p>No hay vacantes publicadas en este momento.</p>
+                            </div>
+                        ) : (
+                            opportunities.map(opp => (
+                                <article key={opp.id} className="opp-card">
+                                    <div className="opp-header">
+                                        <div className="company-logo-small">
+                                            {opp.companyLogo ? <img src={opp.companyLogo} alt={opp.company} /> : opp.company?.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <h3 className="opp-title">{opp.title}</h3>
+                                            <span className="opp-company">{opp.company}</span>
+                                        </div>
+                                    </div>
+                                    <div className="opp-body">
+                                        <p>{opp.description}</p>
+                                        <div className="opp-tags">
+                                            <span className="opp-tag">{opp.modality}</span>
+                                            <span className="opp-tag">{opp.type}</span>
+                                            <span className="opp-tag">{opp.salary}</span>
+                                        </div>
+                                    </div>
+                                    <div className="opp-footer">
+                                        <button className="secondary-action-btn" style={{ width: '100%' }}>Postularme Ahora</button>
+                                    </div>
+                                </article>
+                            ))
+                        )}
+                    </div>
+                </div>
             )}
 
             {activeView === 'profile' && (
@@ -617,6 +816,20 @@ function App() {
                                                 <h3>Sobre el proyecto</h3>
                                                 <p>{project.problemSolved}</p>
                                             </div>
+
+                                            {project.techArchitecture && (
+                                                <div className="details-description">
+                                                    <h3>Arquitectura Técnica</h3>
+                                                    <p>{project.techArchitecture}</p>
+                                                </div>
+                                            )}
+
+                                            {project.team && (
+                                                <div className="details-description">
+                                                    <h3>Equipo Desarrollador</h3>
+                                                    <p>{project.team}</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
@@ -630,6 +843,14 @@ function App() {
                                             <div className="detail-item">
                                                 <span className="detail-label">Estado</span>
                                                 <span className="detail-value">{project.status}</span>
+                                            </div>
+                                            <div className="detail-item">
+                                                <span className="detail-label">Público</span>
+                                                <span className="detail-value">{project.targetAudience}</span>
+                                            </div>
+                                            <div className="detail-item">
+                                                <span className="detail-label">Licencia</span>
+                                                <span className="detail-value">{project.license}</span>
                                             </div>
                                             <div className="detail-item">
                                                 <span className="detail-label">Publicado</span>
@@ -665,7 +886,9 @@ function App() {
                 </div>
             )}
 
-            <button className="fab" onClick={() => setIsUploadModalOpen(true)}>+</button>
+            {userRole === 'student' && (
+                <button className="fab" onClick={() => setIsUploadModalOpen(true)}>+</button>
+            )}
 
             {isUploadModalOpen && (
                 <div className="modal-overlay">
@@ -704,8 +927,34 @@ function App() {
                             </div>
 
                             <div className="form-group">
-                                <label>Problema Solucionado / Descripción</label>
-                                <textarea name="problemSolved" rows="3" defaultValue={editingProject?.problemSolved} placeholder="Describe brevemente qué hace tu proyecto..." required></textarea>
+                                <label>Problema Solucionado</label>
+                                <textarea name="problemSolved" rows="2" defaultValue={editingProject?.problemSolved} placeholder="¿Qué problema resuelve este proyecto?" required></textarea>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Público Objetivo</label>
+                                    <input type="text" name="targetAudience" defaultValue={editingProject?.targetAudience} placeholder="Ej: Niños, Empresas..." required />
+                                </div>
+                                <div className="form-group">
+                                    <label>Licencia</label>
+                                    <select name="license" defaultValue={editingProject?.license || "MIT"}>
+                                        <option value="MIT">MIT</option>
+                                        <option value="GPL">GPL</option>
+                                        <option value="Apache">Apache</option>
+                                        <option value="Propietaria">Propietaria</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Arquitectura Técnica</label>
+                                <textarea name="techArchitecture" rows="2" defaultValue={editingProject?.techArchitecture} placeholder="Ej: MVC, Microservicios, Serverless..." required></textarea>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Equipo Desarrollador (Opcional)</label>
+                                <input type="text" name="team" defaultValue={editingProject?.team} placeholder="Nombres de los integrantes separados por comas" />
                             </div>
 
                             <div className="form-row">
@@ -736,10 +985,59 @@ function App() {
                     </div>
                 </div>
             )}
+            {isOppModalOpen && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h2>Publicar Nueva Oportunidad</h2>
+                            <button className="close-btn" onClick={() => setIsOppModalOpen(false)}>×</button>
+                        </div>
+                        <form className="upload-form" onSubmit={handleOppSubmit}>
+                            <div className="form-group">
+                                <label>Cargo / Título</label>
+                                <input type="text" name="title" placeholder="Ej: Desarrollador Backend Junior" required />
+                            </div>
+                            <div className="form-group">
+                                <label>Descripción de la Vacante</label>
+                                <textarea name="description" rows="4" placeholder="Describe los requisitos y responsabilidades..." required></textarea>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Modalidad</label>
+                                    <select name="modality" required>
+                                        <option value="Remoto">Remoto</option>
+                                        <option value="Presencial">Presencial</option>
+                                        <option value="Híbrido">Híbrido</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Tipo</label>
+                                    <select name="type" required>
+                                        <option value="Tiempo Completo">Tiempo Completo</option>
+                                        <option value="Práctica / Pasantía">Práctica / Pasantía</option>
+                                        <option value="Medio Tiempo">Medio Tiempo</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Salario / Remuneración</label>
+                                    <input type="text" name="salary" placeholder="Ej: $2.500.000 o 'A convenir'" />
+                                </div>
+                                <div className="form-group">
+                                    <label>Ubicación</label>
+                                    <input type="text" name="location" placeholder="Ciudad o 'Cualquiera'" />
+                                </div>
+                            </div>
+                            <button type="submit" className="submit-btn" style={{ marginTop: '20px' }}>Publicar Vacante</button>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             <footer className="dashboard-footer">
                 <div className="footer-left">
-                    AmigoConect © 2026 Plataforma de Gestión de Proyectos Académicos. Todos los derechos reservados.
+                    AmigoConnect © 2026 Plataforma de Gestión de Proyectos Académicos. Todos los derechos reservados.
                 </div>
                 <div className="footer-links">
                     <a href="#">Privacidad</a>

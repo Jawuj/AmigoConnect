@@ -138,3 +138,19 @@
     height: 40px;
     border-radius: 50%;
 }
+.details-description h3 {
+    margin: 25px 0 10px 0;
+    color: var(--text-dark);
+    font-size: 1.2rem;
+    border-bottom: 2px solid var(--primary-color);
+    display: inline-block;
+    padding-bottom: 5px;
+}
+
+.details-description p {
+    line-height: 1.6;
+    color: #555;
+    background: rgba(0,0,0,0.02);
+    padding: 15px;
+    border-radius: 8px;
+}
