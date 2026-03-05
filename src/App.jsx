@@ -133,7 +133,9 @@ function App() {
                                 <div className="card-body">
                                     <h3 className="card-title">{project.title}</h3>
                                     <p className="card-description">{project.problemSolved || project.description}</p>
-                                    <small className="tech-stack">{project.techStack}</small>
+                                    <small className="tech-stack">
+                                        {Array.isArray(project.techStack) ? project.techStack.join(', ') : project.techStack}
+                                    </small>
                                 </div>
                                 <div className="card-footer">
                                     <div className="author-info">
