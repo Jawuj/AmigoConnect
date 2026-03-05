@@ -7,25 +7,41 @@ import { auth, googleProvider, db } from "./firebase";
 function App() {
     const [activeMainFilter, setActiveMainFilter] = useState('Ingeniería');
     const [activeCategory, setActiveCategory] = useState('IA');
-    const [projects, setProjects] = useState([]); // Estado para los proyectos de Firebase
+    const [projects, setProjects] = useState([]);
+    const [users, setUsers] = useState({}); // Mapa de usuarios por ID
 
     const mainFilters = ['Tecnología', 'Ingeniería'];
     const categories = ['IA', 'Web Dev', 'Ciberseguridad', 'Data Science', 'IoT'];
 
-    // 1. Escuchar Firestore en tiempo real
+    // 1. Escuchar Usuarios en tiempo real
     useEffect(() => {
-        // Referencia a la colección "projects" que creaste en el emulador [cite: 119]
-        const q = query(collection(db, "projects"));
+        const qUsers = query(collection(db, "users"));
+        const unsubscribeUsers = onSnapshot(qUsers, (snapshot) => {
+            const usersData = {};
+            snapshot.docs.forEach(doc => {
+                const data = doc.data();
+                usersData[doc.id] = data;
+                // También indexamos por el campo DocumentID si el usuario lo usa como ID personalizado
+                if (data.DocumentID) {
+                    usersData[String(data.DocumentID)] = data;
+                }
+            });
+            setUsers(usersData);
+        });
+        return () => unsubscribeUsers();
+    }, []);
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+    // 2. Escuchar Proyectos en tiempo real
+    useEffect(() => {
+        const qProjects = query(collection(db, "projects"));
+        const unsubscribeProjects = onSnapshot(qProjects, (snapshot) => {
             const projectsData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
             setProjects(projectsData);
         });
-
-        return () => unsubscribe();
+        return () => unsubscribeProjects();
     }, []);
 
     const handleLogin = async () => {
@@ -52,13 +68,46 @@ function App() {
                 </div>
 
                 <div className="header-actions">
-                    <button className="icon-button" onClick={handleLogin}>🔑 Login</button> {/* Botón de login añadido */}
+                    <button className="icon-button" onClick={handleLogin}>🔑 Login</button>
                     <button className="icon-button">🔔</button>
                     <div className="user-profile-img"></div>
                 </div>
             </header>
 
-            {/* ... Resto de tu barra de navegación (nav) queda igual ... */}
+            <nav className="filter-bar">
+                <div className="semester-filter">
+                    <select className="semester-select">
+                        <option>Semestre: Todos</option>
+                        <option>Semestre 1</option>
+                        <option>Semestre 2</option>
+                        <option>Semestre 3</option>
+                    </select>
+                </div>
+
+                <div className="main-filters-group">
+                    {mainFilters.map(filter => (
+                        <button
+                            key={filter}
+                            className={`main-filter-btn ${activeMainFilter === filter ? 'active' : ''}`}
+                            onClick={() => setActiveMainFilter(filter)}
+                        >
+                            {filter}
+                        </button>
+                    ))}
+                </div>
+
+                <div className="category-tags">
+                    {categories.map(cat => (
+                        <button
+                            key={cat}
+                            className={`tag ${activeCategory === cat ? 'active' : ''}`}
+                            onClick={() => setActiveCategory(cat)}
+                        >
+                            {cat}
+                        </button>
+                    ))}
+                </div>
+            </nav>
 
             <main className="main-content">
                 <div className="section-header">
@@ -66,32 +115,45 @@ function App() {
                 </div>
 
                 <div className="project-grid">
-                    {projects.map(project => (
-                        <article key={project.id} className="project-card">
-                            {/* Reemplaza la sección del banner por esto */}
-                            <div
-                                className="card-banner"
-                                style={{
-                                    backgroundImage: project.imageUrl ? `url(${project.imageUrl})` : 'none',
-                                    backgroundColor: project.imageUrl ? 'transparent' : '#e6b38a'
-                                }}>
-                                <span className="tag-semester">Semestre {project.semester || 'N/A'}</span>
-                                {project.isValidated && <span className="badge-validated">Validado</span>}
-                            </div>
-                            <div className="card-body">
-                                <h3 className="card-title">{project.title}</h3>
-                                <p className="card-description">{project.problemSolved || project.description}</p>
-                                <small className="tech-stack">{project.techStack}</small> {/* Muestra la arquitectura [cite: 52] */}
-                            </div>
-                            <div className="card-footer">
-                                <div className="author-info">
-                                    <div className="author-avatar">ID</div>
-                                    <span className="author-name">{project.authorId || 'Estudiante'}</span>
+                    {projects.map(project => {
+                        const projectAuthor = users[project.authorId] || {};
+                        return (
+                            <article key={project.id} className="project-card">
+                                <div
+                                    className="card-banner"
+                                    style={{
+                                        backgroundImage: project.imageUrl ? `url(${project.imageUrl})` : 'none',
+                                        backgroundColor: project.imageUrl ? 'transparent' : '#e6b38a',
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center'
+                                    }}>
+                                    <span className="tag-semester">Semestre {project.semester || 'N/A'}</span>
+                                    {project.isValidated && <span className="badge-validated">Validado</span>}
                                 </div>
-                                <span className="card-date">{project.status}</span> {/* Estado del proyecto [cite: 57] */}
-                            </div>
-                        </article>
-                    ))}
+                                <div className="card-body">
+                                    <h3 className="card-title">{project.title}</h3>
+                                    <p className="card-description">{project.problemSolved || project.description}</p>
+                                    <small className="tech-stack">{project.techStack}</small>
+                                </div>
+                                <div className="card-footer">
+                                    <div className="author-info">
+                                        <div className="author-avatar">
+                                            {projectAuthor.avatarUrl ? (
+                                                <img src={projectAuthor.avatarUrl} alt={projectAuthor.name} />
+                                            ) : (
+                                                (projectAuthor.name || 'E').charAt(0)
+                                            )}
+                                        </div>
+                                        <div className="author-details">
+                                            <span className="author-name">{projectAuthor.name || 'Cargando...'}</span>
+                                            {projectAuthor.program && <small className="author-program">{projectAuthor.program}</small>}
+                                        </div>
+                                    </div>
+                                    <span className="card-date">{project.status}</span>
+                                </div>
+                            </article>
+                        );
+                    })}
                 </div>
             </main>
 
@@ -99,7 +161,12 @@ function App() {
 
             <footer className="dashboard-footer">
                 <div className="footer-left">
-                    AmigoConect © 2026 Plataforma de Gestión de Proyectos Académicos. [cite: 42]
+                    AmigoConect © 2026 Plataforma de Gestión de Proyectos Académicos. Todos los derechos reservados.
+                </div>
+                <div className="footer-links">
+                    <a href="#">Privacidad</a>
+                    <a href="#">Términos</a>
+                    <a href="#">Contacto</a>
                 </div>
             </footer>
         </div>
