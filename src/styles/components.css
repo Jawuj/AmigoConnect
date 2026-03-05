@@ -1,12 +1,26 @@
 /* Interactive components and project-specific styles */
 .filter-bar {
     background-color: var(--primary-color);
-    padding: 0 40px 20px 40px;
+    padding: 10px 40px 25px 40px;
     display: flex;
-    align-items: center;
-    gap: 20px;
+    align-items: flex-end;
+    gap: 30px;
     flex-wrap: wrap;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.filter-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .semester-filter {
@@ -52,26 +66,48 @@
 
 .category-tags {
     display: flex;
-    gap: 10px;
-    overflow-x: auto;
-    padding-bottom: 5px;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .tag {
-    background: rgba(255, 255, 255, 0.15);
-    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: var(--white);
-    padding: 5px 15px;
+    padding: 6px 14px;
     border-radius: 20px;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     white-space: nowrap;
     cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tag:hover {
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .tag.active {
     background: var(--white);
     color: var(--primary-color);
-    font-weight: bold;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.tag-clear {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.8rem;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 5px;
+}
+
+.tag-clear:hover {
+    color: white;
 }
 
 .main-content {
@@ -145,6 +181,32 @@
     border-radius: 12px;
     font-size: 0.7rem;
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.edit-card-btn {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--primary-color);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.edit-card-btn:hover {
+    background: white;
+    transform: scale(1.1);
 }
 
 .card-body {

@@ -70,6 +70,12 @@ body {
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-muted);
+    display: flex;
+}
+
+.search-icon svg {
+    width: 16px;
+    height: 16px;
 }
 
 .header-actions {

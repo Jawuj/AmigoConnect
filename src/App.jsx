@@ -1,14 +1,32 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-import { auth, googleProvider, db } from "./firebase";
+import { auth, googleProvider, db, storage } from "./firebase";
 import { onAuthStateChanged, signOut, signInWithPopup } from "firebase/auth";
-import { collection, onSnapshot, query, doc, getDoc, setDoc, addDoc, serverTimestamp } from "firebase/firestore";
-import { storage } from "./firebase";
+import { collection, onSnapshot, query, doc, getDoc, setDoc, addDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+// ICONOS SVG
+const Icons = {
+    Search: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
+    Bell: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
+    Logout: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>,
+    Edit: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>,
+    External: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>,
+    Rocket: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.71-2.13.09-2.91a2.18 2.18 0 0 0-3.09-.09z"></path><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"></path><path d="m9 12 2.55 2.55"></path><path d="m15 9-2 2"></path></svg>,
+    Upload: () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
+    Plus: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+    Check: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
+    School: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>,
+    Mail: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
+    Github: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+};
+
 function App() {
-    const [activeMainFilter, setActiveMainFilter] = useState('Ingeniería');
-    const [activeCategory, setActiveCategory] = useState('IA');
+    const [activeMainFilter, setActiveMainFilter] = useState('Todos');
+    const [activeCategories, setActiveCategories] = useState([]); // Array para multi-selección
+    const [activeSemester, setActiveSemester] = useState('Todos');
+    const [activeStatus, setActiveStatus] = useState('Todos');
+
     const [user, setUser] = useState(null);
     const [profile, setProfile] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
@@ -16,13 +34,17 @@ function App() {
     const [users, setUsers] = useState({}); // Mapa de todos los usuarios por ID
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [editingProject, setEditingProject] = useState(null); // Proyecto que estamos editando
 
     // Gestión de Vistas
     const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'profile' | 'details'
     const [selectedProjectId, setSelectedProjectId] = useState(null);
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
 
-    const mainFilters = ['Tecnología', 'Ingeniería'];
-    const categories = ['IA', 'Web Dev', 'Ciberseguridad', 'Data Science', 'IoT'];
+    const mainFilters = ['Todos', 'Tecnología', 'Ingeniería'];
+    const projectCategories = ['Web', 'Móvil', 'IA', 'IoT', 'Ciberseguridad', 'Data Science'];
+    const semesters = ['Todos', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+    const statuses = ['Todos', 'Estable', 'Beta', 'En Desarrollo'];
 
     // 0. Manejar estado de autenticación
     useEffect(() => {
@@ -110,6 +132,28 @@ function App() {
         }
     };
 
+    const handleUpdateProfile = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const updatedProfile = {
+            ...profile,
+            name: formData.get('name'),
+            program: formData.get('program'),
+            semester: Number(formData.get('semester')),
+            github: formData.get('github')
+        };
+
+        try {
+            await updateDoc(doc(db, "users", user.uid), updatedProfile);
+            setProfile(updatedProfile);
+            setIsEditingProfile(false);
+            alert("Perfil actualizado correctamente");
+        } catch (error) {
+            console.error("Error al actualizar perfil:", error);
+            alert("No se pudo actualizar el perfil");
+        }
+    };
+
     const handleProjectSubmit = async (e) => {
         e.preventDefault();
         if (!user) return;
@@ -117,19 +161,20 @@ function App() {
         setIsUploading(true);
         const formData = new FormData(e.target);
         const imageFile = formData.get('image');
-        let imageUrl = "";
+        let imageUrl = editingProject?.imageUrl || "";
 
         try {
-            // 1. Subir imagen si existe
+            // 1. Subir imagen si se selecciona una nueva
             if (imageFile && imageFile.size > 0) {
                 const storageRef = ref(storage, `project_images/${Date.now()}_${imageFile.name}`);
                 const snapshot = await uploadBytes(storageRef, imageFile);
                 imageUrl = await getDownloadURL(snapshot.ref);
             }
 
-            // 2. Crear documento en Firestore
+            // 2. Preparar datos
             const projectData = {
                 title: formData.get('title'),
+                mainFilter: formData.get('mainFilter') || 'Tecnología',
                 category: formData.get('category'),
                 problemSolved: formData.get('problemSolved'),
                 semester: Number(formData.get('semester')),
@@ -138,17 +183,24 @@ function App() {
                 demoUrl: formData.get('demoUrl'),
                 imageUrl: imageUrl,
                 authorId: user.uid,
-                isValidated: false,
-                createdAt: serverTimestamp()
+                updatedAt: serverTimestamp()
             };
 
-            await addDoc(collection(db, "projects"), projectData);
+            if (editingProject) {
+                await updateDoc(doc(db, "projects", editingProject.id), projectData);
+                alert("¡Proyecto actualizado con éxito!");
+            } else {
+                projectData.createdAt = serverTimestamp();
+                projectData.isValidated = false;
+                await addDoc(collection(db, "projects"), projectData);
+                alert("¡Proyecto compartido con éxito!");
+            }
 
             setIsUploadModalOpen(false);
-            alert("¡Proyecto subido con éxito!");
+            setEditingProject(null);
         } catch (error) {
-            console.error("Error al subir proyecto:", error);
-            alert("Hubo un error al subir el proyecto. Intenta de nuevo.");
+            console.error("Error al procesar proyecto:", error);
+            alert("Hubo un error. Intenta de nuevo.");
         } finally {
             setIsUploading(false);
         }
@@ -245,12 +297,12 @@ function App() {
                 </div>
 
                 <div className="search-container">
-                    <span className="search-icon">🔍</span>
+                    <span className="search-icon"><Icons.Search /></span>
                     <input type="text" placeholder="Buscar proyectos" className="search-input" />
                 </div>
 
                 <div className="header-actions">
-                    <button className="icon-button">🔔</button>
+                    <button className="icon-button" title="Notificaciones"><Icons.Bell /></button>
                     <div className="user-profile-info" onClick={handleProfileClick} title="Mi Perfil">
                         <div className="user-profile-img">
                             {profile?.avatarUrl ? (
@@ -263,44 +315,77 @@ function App() {
                             {profile ? profile.name.split(' ')[0] : user?.displayName?.split(' ')[0]}
                         </span>
                     </div>
-                    <button className="icon-button" onClick={handleLogout} title="Cerrar sesión">🚪</button>
+                    <button className="icon-button" onClick={handleLogout} title="Cerrar sesión"><Icons.Logout /></button>
                 </div>
             </header>
 
             {activeView === 'dashboard' && (
                 <>
                     <nav className="filter-bar">
-                        <div className="semester-filter">
-                            <select className="semester-select">
-                                <option>Semestre: Todos</option>
-                                <option>Semestre 1</option>
-                                <option>Semestre 2</option>
-                                <option>Semestre 3</option>
+                        <div className="filter-group">
+                            <label className="filter-label">Facultad:</label>
+                            <div className="main-filters-group">
+                                {mainFilters.map(filter => (
+                                    <button
+                                        key={filter}
+                                        className={`main-filter-btn ${activeMainFilter === filter ? 'active' : ''}`}
+                                        onClick={() => setActiveMainFilter(filter)}
+                                    >
+                                        {filter}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="filter-group">
+                            <label className="filter-label">Semestre:</label>
+                            <select
+                                className="semester-select"
+                                value={activeSemester}
+                                onChange={(e) => setActiveSemester(e.target.value)}
+                            >
+                                {semesters.map(s => (
+                                    <option key={s} value={s}>{s === 'Todos' ? 'Todos' : `Semestre ${s}`}</option>
+                                ))}
                             </select>
                         </div>
 
-                        <div className="main-filters-group">
-                            {mainFilters.map(filter => (
-                                <button
-                                    key={filter}
-                                    className={`main-filter-btn ${activeMainFilter === filter ? 'active' : ''}`}
-                                    onClick={() => setActiveMainFilter(filter)}
-                                >
-                                    {filter}
-                                </button>
-                            ))}
+                        <div className="filter-group">
+                            <label className="filter-label">Estado:</label>
+                            <select
+                                className="semester-select"
+                                value={activeStatus}
+                                onChange={(e) => setActiveStatus(e.target.value)}
+                            >
+                                {statuses.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
                         </div>
 
-                        <div className="category-tags">
-                            {categories.map(cat => (
-                                <button
-                                    key={cat}
-                                    className={`tag ${activeCategory === cat ? 'active' : ''}`}
-                                    onClick={() => setActiveCategory(cat)}
-                                >
-                                    {cat}
-                                </button>
-                            ))}
+                        <div className="filter-group" style={{ flexGrow: 1 }}>
+                            <label className="filter-label">Tecnologías:</label>
+                            <div className="category-tags">
+                                {projectCategories.map(cat => {
+                                    const isActive = activeCategories.includes(cat);
+                                    return (
+                                        <button
+                                            key={cat}
+                                            className={`tag ${isActive ? 'active' : ''}`}
+                                            onClick={() => {
+                                                if (isActive) {
+                                                    setActiveCategories(activeCategories.filter(c => c !== cat));
+                                                } else {
+                                                    setActiveCategories([...activeCategories, cat]);
+                                                }
+                                            }}
+                                        >
+                                            {isActive && <Icons.Check />} {cat}
+                                        </button>
+                                    );
+                                })}
+                                {activeCategories.length > 0 && (
+                                    <button className="tag-clear" onClick={() => setActiveCategories([])}>Limpiar</button>
+                                )}
+                            </div>
                         </div>
                     </nav>
 
@@ -309,56 +394,96 @@ function App() {
                             <h2 className="section-title">Explorar Proyectos</h2>
                         </div>
 
-                        <div className="project-grid">
-                            {projects.map(project => {
-                                const projectAuthor = users[project.authorId] || {};
+                        {(() => {
+                            const filteredProjects = projects.filter(project => {
+                                const matchMain = activeMainFilter === 'Todos' || project.mainFilter === activeMainFilter;
+                                const matchSemester = activeSemester === 'Todos' || String(project.semester) === activeSemester;
+                                const matchStatus = activeStatus === 'Todos' || project.status === activeStatus;
+                                const matchCategory = activeCategories.length === 0 || activeCategories.includes(project.category);
+                                return matchMain && matchSemester && matchStatus && matchCategory;
+                            });
+
+                            if (filteredProjects.length === 0) {
                                 return (
-                                    <article key={project.id} className="project-card" onClick={() => handleProjectClick(project.id)} style={{ cursor: 'pointer' }}>
-                                        <div
-                                            className="card-banner"
-                                            style={{
-                                                backgroundImage: project.imageUrl ? `url(${project.imageUrl})` : 'none',
-                                                backgroundColor: project.imageUrl ? 'transparent' : '#e6b38a',
-                                                backgroundSize: 'cover',
-                                                backgroundPosition: 'center'
-                                            }}>
-                                            <span className="tag-semester">Semestre {project.semester || 'N/A'}</span>
-                                            {project.isValidated && <span className="badge-validated">Validado</span>}
-                                        </div>
-                                        <div className="card-body">
-                                            <h3 className="card-title">{project.title}</h3>
-                                            <p className="card-description">{project.problemSolved || project.description}</p>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <small className="tech-stack">
-                                                    {Array.isArray(project.techStack) ? project.techStack.slice(0, 3).join(', ') : project.techStack}
-                                                </small>
-                                                {project.demoUrl && (
-                                                    <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="demo-link-small" onClick={(e) => e.stopPropagation()}>
-                                                        🌐 Demo
-                                                    </a>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className="card-footer">
-                                            <div className="author-info">
-                                                <div className="author-avatar">
-                                                    {projectAuthor.avatarUrl ? (
-                                                        <img src={projectAuthor.avatarUrl} alt={projectAuthor.name} />
-                                                    ) : (
-                                                        (projectAuthor.name || 'E').charAt(0)
+                                    <div className="empty-state">
+                                        <p>No se encontraron proyectos con los filtros seleccionados.</p>
+                                        <button className="tag-clear" onClick={() => {
+                                            setActiveMainFilter('Todos');
+                                            setActiveSemester('Todos');
+                                            setActiveStatus('Todos');
+                                            setActiveCategories([]);
+                                        }}>Limpiar Filtros</button>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div className="project-grid">
+                                    {filteredProjects.map(project => {
+                                        const projectAuthor = users[project.authorId] || {};
+                                        const isAuthor = user?.uid === project.authorId;
+                                        return (
+                                            <article key={project.id} className="project-card" onClick={() => handleProjectClick(project.id)} style={{ cursor: 'pointer' }}>
+                                                <div
+                                                    className="card-banner"
+                                                    style={{
+                                                        backgroundImage: project.imageUrl ? `url(${project.imageUrl})` : 'none',
+                                                        backgroundColor: project.imageUrl ? 'transparent' : '#e6b38a',
+                                                        backgroundSize: 'cover',
+                                                        backgroundPosition: 'center'
+                                                    }}>
+                                                    <span className="tag-semester">Semestre {project.semester || 'N/A'}</span>
+                                                    {project.isValidated && <span className="badge-validated">Validado</span>}
+                                                    {isAuthor && (
+                                                        <button
+                                                            className="edit-card-btn"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setEditingProject(project);
+                                                                setIsUploadModalOpen(true);
+                                                            }}
+                                                            title="Editar Proyecto"
+                                                        >
+                                                            <Icons.Edit />
+                                                        </button>
                                                     )}
                                                 </div>
-                                                <div className="author-details">
-                                                    <span className="author-name">{projectAuthor.name || 'Cargando...'}</span>
-                                                    {projectAuthor.program && <small className="author-program">{projectAuthor.program}</small>}
+                                                <div className="card-body">
+                                                    <h3 className="card-title">{project.title}</h3>
+                                                    <p className="card-description">{project.problemSolved || project.description}</p>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <small className="tech-stack">
+                                                            {Array.isArray(project.techStack) ? project.techStack.slice(0, 3).join(', ') : project.techStack}
+                                                        </small>
+                                                        {project.demoUrl && (
+                                                            <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="demo-link-small" onClick={(e) => e.stopPropagation()}>
+                                                                <Icons.Rocket /> Demo
+                                                            </a>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <span className="card-date">{project.status}</span>
-                                        </div>
-                                    </article>
-                                );
-                            })}
-                        </div>
+                                                <div className="card-footer">
+                                                    <div className="author-info">
+                                                        <div className="author-avatar">
+                                                            {projectAuthor.avatarUrl ? (
+                                                                <img src={projectAuthor.avatarUrl} alt={projectAuthor.name} />
+                                                            ) : (
+                                                                (projectAuthor.name || 'E').charAt(0)
+                                                            )}
+                                                        </div>
+                                                        <div className="author-details">
+                                                            <span className="author-name">{projectAuthor.name || 'Cargando...'}</span>
+                                                            {projectAuthor.program && <small className="author-program">{projectAuthor.program}</small>}
+                                                        </div>
+                                                    </div>
+                                                    <span className="card-date">{project.status}</span>
+                                                </div>
+                                            </article>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
                     </main>
                 </>
             )}
@@ -377,21 +502,40 @@ function App() {
                                 )}
                             </div>
                             <div className="profile-details-text">
-                                <h1>{profile?.name || user?.displayName}</h1>
-                                <div className="profile-subtext">
-                                    <span>🎓 {profile?.program} • Semestre {profile?.semester}</span>
-                                    <span>📧 {user?.email}</span>
-                                    {profile?.github && (
-                                        <a href={profile.github} target="_blank" rel="noopener noreferrer" className="profile-link">
-                                            🔗 github.com/{profile.github.split('/').pop()}
-                                        </a>
-                                    )}
-                                </div>
+                                {isEditingProfile ? (
+                                    <form onSubmit={handleUpdateProfile} className="edit-profile-form">
+                                        <input type="text" name="name" defaultValue={profile?.name || user?.displayName} placeholder="Nombre" required />
+                                        <div className="form-row">
+                                            <input type="text" name="program" defaultValue={profile?.program} placeholder="Carrera" required />
+                                            <input type="number" name="semester" defaultValue={profile?.semester} placeholder="Semestre" required />
+                                        </div>
+                                        <input type="text" name="github" defaultValue={profile?.github} placeholder="Usuario Github" />
+                                        <div className="form-actions-inline">
+                                            <button type="submit" className="primary-action-btn"><Icons.Check /> Guardar</button>
+                                            <button type="button" className="secondary-action-btn" onClick={() => setIsEditingProfile(false)}>Cancelar</button>
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <>
+                                        <h1>{profile?.name || user?.displayName}</h1>
+                                        <div className="profile-subtext">
+                                            <span><Icons.School /> {profile?.program} • Semestre {profile?.semester}</span>
+                                            <span><Icons.Mail /> {user?.email}</span>
+                                            {profile?.github && (
+                                                <a href={profile.github} target="_blank" rel="noopener noreferrer" className="profile-link">
+                                                    <Icons.Github /> github.com/{profile.github.split('/').pop()}
+                                                </a>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
-                        <button className="edit-profile-btn" onClick={() => alert("Próximamente: Editar perfil")}>
-                            <span>✏️</span> Editar Perfil
-                        </button>
+                        {!isEditingProfile && (
+                            <button className="edit-profile-btn" onClick={() => setIsEditingProfile(true)}>
+                                <Icons.Edit /> Editar Perfil
+                            </button>
+                        )}
                     </div>
 
                     <div className="profile-sections-grid">
@@ -402,14 +546,14 @@ function App() {
                                     <div>
                                         <p>✅ Hoja de vida cargada correctamente.</p>
                                         <a href={profile.resumeUrl} target="_blank" rel="noopener noreferrer" className="resume-link">
-                                            📄 Ver documento actual
+                                            <Icons.External /> Ver documento actual
                                         </a>
                                     </div>
                                 ) : (
                                     <div>
                                         <p>Aún no has subido tu hoja de vida.</p>
                                         <button className="secondary-action-btn" style={{ maxWidth: '200px', margin: '10px auto' }} onClick={() => alert("Próximamente: Subir PDF")}>
-                                            📤 Subir PDF
+                                            <Icons.Upload /> Subir PDF
                                         </button>
                                     </div>
                                 )}
@@ -527,65 +671,66 @@ function App() {
                 <div className="modal-overlay">
                     <div className="modal-content">
                         <div className="modal-header">
-                            <h2>Subir Nuevo Proyecto</h2>
-                            <button className="close-btn" onClick={() => setIsUploadModalOpen(false)}>×</button>
+                            <h2>{editingProject ? 'Editar Proyecto' : 'Subir Nuevo Proyecto'}</h2>
+                            <button className="close-btn" onClick={() => { setIsUploadModalOpen(false); setEditingProject(null); }}>×</button>
                         </div>
                         <form className="upload-form" onSubmit={handleProjectSubmit}>
                             <div className="form-group">
                                 <label>Título del Proyecto</label>
-                                <input type="text" name="title" placeholder="Ej: Sistema de Riego IoT" required />
+                                <input type="text" name="title" defaultValue={editingProject?.title} placeholder="Ej: Sistema de Riego IoT" required />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Facultad / Programa</label>
+                                <select name="mainFilter" defaultValue={editingProject?.mainFilter || "Tecnología"} required>
+                                    <option value="Tecnología">Tecnología</option>
+                                    <option value="Ingeniería">Ingeniería</option>
+                                </select>
                             </div>
 
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Categoría</label>
-                                    <select name="category" required>
-                                        <option value="Web">Web</option>
-                                        <option value="Móvil">Móvil</option>
-                                        <option value="IA">IA</option>
-                                        <option value="IoT">IoT</option>
-                                        <option value="Ciberseguridad">Ciberseguridad</option>
-                                        <option value="Data Science">Data Science</option>
+                                    <select name="category" defaultValue={editingProject?.category} required>
+                                        {projectCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                                     </select>
                                 </div>
                                 <div className="form-group">
                                     <label>Estado</label>
-                                    <select name="status" required>
-                                        <option value="Estable">Estable</option>
-                                        <option value="Beta">Beta</option>
-                                        <option value="En Desarrollo">En Desarrollo</option>
+                                    <select name="status" defaultValue={editingProject?.status} required>
+                                        {statuses.filter(s => s !== 'Todos').map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                 </div>
                             </div>
 
                             <div className="form-group">
                                 <label>Problema Solucionado / Descripción</label>
-                                <textarea name="problemSolved" rows="3" placeholder="Describe brevemente qué hace tu proyecto..." required></textarea>
+                                <textarea name="problemSolved" rows="3" defaultValue={editingProject?.problemSolved} placeholder="Describe brevemente qué hace tu proyecto..." required></textarea>
                             </div>
 
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Semestre</label>
-                                    <input type="number" name="semester" min="1" max="10" placeholder="1-10" required />
+                                    <input type="number" name="semester" min="1" max="10" defaultValue={editingProject?.semester} placeholder="1-10" required />
                                 </div>
                                 <div className="form-group">
                                     <label>Demo URL (Opcional)</label>
-                                    <input type="url" name="demoUrl" placeholder="https://..." />
+                                    <input type="url" name="demoUrl" defaultValue={editingProject?.demoUrl} placeholder="https://..." />
                                 </div>
                             </div>
 
                             <div className="form-group">
                                 <label>Stack Tecnológico (separado por comas)</label>
-                                <input type="text" name="techStack" placeholder="React, Node.js, Firebase" required />
+                                <input type="text" name="techStack" defaultValue={editingProject?.techStack?.join(', ')} placeholder="React, Node.js, Firebase" required />
                             </div>
 
                             <div className="form-group">
-                                <label>Captura del Proyecto (Imagen)</label>
-                                <input type="file" name="image" accept="image/*" required />
+                                <label>Captura del Proyecto {editingProject ? '(Opcional si no cambias)' : '(Imagen)'}</label>
+                                <input type="file" name="image" accept="image/*" required={!editingProject} />
                             </div>
 
                             <button type="submit" className="submit-btn" disabled={isUploading}>
-                                {isUploading ? "Subiendo..." : "Publicar Proyecto"}
+                                {isUploading ? "Guardando..." : (editingProject ? "Actualizar Proyecto" : "Publicar Proyecto")}
                             </button>
                         </form>
                     </div>
