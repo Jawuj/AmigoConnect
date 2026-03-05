@@ -19,3 +19,20 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const googleProvider = new GoogleAuthProvider();
+
+import { connectAuthEmulator } from "firebase/auth";
+import { connectFirestoreEmulator } from "firebase/firestore";
+
+// Al final de tu archivo, después de las constantes exportadas:
+if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+    connectAuthEmulator(auth, "http://127.0.0.1:9099");
+    connectFirestoreEmulator(db, "127.0.0.1", 8080);
+}
+
+import { getStorage, connectStorageEmulator } from "firebase/storage";
+
+export const storage = getStorage(app);
+
+if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+    connectStorageEmulator(storage, "127.0.0.1", 9199);
+}
