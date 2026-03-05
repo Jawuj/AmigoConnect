@@ -1,17 +1,45 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-import { signInWithPopup } from "firebase/auth";
-import { collection, onSnapshot, query, where } from "firebase/firestore"; // Importar herramientas de Firestore
 import { auth, googleProvider, db } from "./firebase";
+import { onAuthStateChanged, signOut, signInWithPopup } from "firebase/auth";
+import { collection, onSnapshot, query, doc, getDoc, setDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { storage } from "./firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 function App() {
     const [activeMainFilter, setActiveMainFilter] = useState('Ingeniería');
     const [activeCategory, setActiveCategory] = useState('IA');
+    const [user, setUser] = useState(null);
+    const [profile, setProfile] = useState(null);
+    const [authLoading, setAuthLoading] = useState(true);
     const [projects, setProjects] = useState([]);
-    const [users, setUsers] = useState({}); // Mapa de usuarios por ID
+    const [users, setUsers] = useState({}); // Mapa de todos los usuarios por ID
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
 
     const mainFilters = ['Tecnología', 'Ingeniería'];
     const categories = ['IA', 'Web Dev', 'Ciberseguridad', 'Data Science', 'IoT'];
+
+    // 0. Manejar estado de autenticación
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            setUser(currentUser);
+            if (currentUser) {
+                // Verificar si tiene perfil en Firestore
+                const docRef = doc(db, "users", currentUser.uid);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    setProfile(docSnap.data());
+                } else {
+                    setProfile(null);
+                }
+            } else {
+                setProfile(null);
+            }
+            setAuthLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
 
     // 1. Escuchar Usuarios en tiempo real
     useEffect(() => {
@@ -46,13 +74,145 @@ function App() {
 
     const handleLogin = async () => {
         try {
-            const result = await signInWithPopup(auth, googleProvider);
-            console.log("Usuario logueado:", result.user);
-            alert(`¡Bienvenido, ${result.user.displayName}!`);
+            await signInWithPopup(auth, googleProvider);
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
         }
     };
+
+    const handleLogout = () => signOut(auth);
+
+    const handleOnboardingSubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const newProfile = {
+            uid: user.uid,
+            DocumentID: user.uid, // Usamos el UID como DocumentID para consistencia
+            name: user.displayName,
+            mail: user.email,
+            dni: formData.get('dni'),
+            program: formData.get('program'),
+            semester: formData.get('semester'),
+            github: formData.get('github'),
+            avatarUrl: user.photoURL || "",
+            createdAt: new Date().toISOString()
+        };
+
+        try {
+            await setDoc(doc(db, "users", user.uid), newProfile);
+            setProfile(newProfile);
+        } catch (error) {
+            console.error("Error al guardar perfil:", error);
+            alert("Error al guardar el perfil. Intenta de nuevo.");
+        }
+    };
+
+    const handleProjectSubmit = async (e) => {
+        e.preventDefault();
+        if (!user) return;
+
+        setIsUploading(true);
+        const formData = new FormData(e.target);
+        const imageFile = formData.get('image');
+        let imageUrl = "";
+
+        try {
+            // 1. Subir imagen si existe
+            if (imageFile && imageFile.size > 0) {
+                const storageRef = ref(storage, `project_images/${Date.now()}_${imageFile.name}`);
+                const snapshot = await uploadBytes(storageRef, imageFile);
+                imageUrl = await getDownloadURL(snapshot.ref);
+            }
+
+            // 2. Crear documento en Firestore
+            const projectData = {
+                title: formData.get('title'),
+                category: formData.get('category'),
+                problemSolved: formData.get('problemSolved'),
+                semester: Number(formData.get('semester')),
+                status: formData.get('status'),
+                techStack: formData.get('techStack').split(',').map(item => item.trim()),
+                demoUrl: formData.get('demoUrl'),
+                imageUrl: imageUrl,
+                authorId: user.uid,
+                isValidated: false,
+                createdAt: serverTimestamp()
+            };
+
+            await addDoc(collection(db, "projects"), projectData);
+
+            setIsUploadModalOpen(false);
+            alert("¡Proyecto subido con éxito!");
+        } catch (error) {
+            console.error("Error al subir proyecto:", error);
+            alert("Hubo un error al subir el proyecto. Intenta de nuevo.");
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    if (authLoading) return <div className="loading-screen">Cargando...</div>;
+
+    // VISTA DE LOGIN
+    if (!user) {
+        return (
+            <div className="login-page">
+                <div className="login-bg-overlay"></div>
+                <div className="login-card">
+                    <div className="login-logo">
+                        <img src="./UniversityIsotipo.png" alt="Logo" />
+                        <h2>AmigoConect</h2>
+                    </div>
+                    <h1>Bienvenido a la red de proyectos</h1>
+                    <p>Conéctate con otros estudiantes y comparte tu ingenio.</p>
+                    <button className="google-login-btn" onClick={handleLogin}>
+                        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/layout/google.png" alt="Google" />
+                        Entrar con cuenta institucional
+                    </button>
+                    <footer className="login-footer">
+                        AmigoConect © 2026
+                    </footer>
+                </div>
+            </div>
+        );
+    }
+
+    // VISTA DE ONBOARDING (REGISTRO)
+    if (user && !profile) {
+        return (
+            <div className="onboarding-page">
+                <div className="onboarding-card">
+                    <h2>¡Hola, {user.displayName}!</h2>
+                    <p>Completa tu perfil para empezar a explorar y publicar proyectos.</p>
+                    <form className="onboarding-form" onSubmit={handleOnboardingSubmit}>
+                        <div className="form-group">
+                            <label>DNI / Documento</label>
+                            <input type="text" name="dni" placeholder="Ej: 123456789" required />
+                        </div>
+                        <div className="form-group">
+                            <label>Programa Académico</label>
+                            <select name="program" required>
+                                <option value="">Selecciona tu carrera</option>
+                                <option value="Tecnología en Desarrollo de Software">Tecnología en Desarrollo de Software</option>
+                                <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
+                            </select>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Semestre Actual</label>
+                                <input type="number" name="semester" min="1" max="10" placeholder="1-10" required />
+                            </div>
+                            <div className="form-group">
+                                <label>GitHub (Opcional)</label>
+                                <input type="url" name="github" placeholder="https://github.com/usuario" />
+                            </div>
+                        </div>
+                        <button type="submit" className="submit-btn">Finalizar Registro</button>
+                    </form>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="dashboard-container">
@@ -68,9 +228,19 @@ function App() {
                 </div>
 
                 <div className="header-actions">
-                    <button className="icon-button" onClick={handleLogin}>🔑 Login</button>
                     <button className="icon-button">🔔</button>
-                    <div className="user-profile-img"></div>
+                    <div className="user-profile-info" onClick={handleLogout} title="Cerrar sesión">
+                        <div className="user-profile-img">
+                            {profile?.avatarUrl ? (
+                                <img src={profile.avatarUrl} alt="Yo" />
+                            ) : (
+                                <span>{(profile?.name || user?.displayName || 'U').charAt(0)}</span>
+                            )}
+                        </div>
+                        <span className="user-profile-name">
+                            {profile ? profile.name.split(' ')[0] : user?.displayName?.split(' ')[0]}
+                        </span>
+                    </div>
                 </div>
             </header>
 
@@ -159,7 +329,76 @@ function App() {
                 </div>
             </main>
 
-            <button className="fab" onClick={() => alert("Módulo de registro próximamente")}>+</button>
+            <button className="fab" onClick={() => setIsUploadModalOpen(true)}>+</button>
+
+            {isUploadModalOpen && (
+                <div className="modal-overlay">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h2>Subir Nuevo Proyecto</h2>
+                            <button className="close-btn" onClick={() => setIsUploadModalOpen(false)}>×</button>
+                        </div>
+                        <form className="upload-form" onSubmit={handleProjectSubmit}>
+                            <div className="form-group">
+                                <label>Título del Proyecto</label>
+                                <input type="text" name="title" placeholder="Ej: Sistema de Riego IoT" required />
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Categoría</label>
+                                    <select name="category" required>
+                                        <option value="Web">Web</option>
+                                        <option value="Móvil">Móvil</option>
+                                        <option value="IA">IA</option>
+                                        <option value="IoT">IoT</option>
+                                        <option value="Ciberseguridad">Ciberseguridad</option>
+                                        <option value="Data Science">Data Science</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Estado</label>
+                                    <select name="status" required>
+                                        <option value="Estable">Estable</option>
+                                        <option value="Beta">Beta</option>
+                                        <option value="En Desarrollo">En Desarrollo</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Problema Solucionado / Descripción</label>
+                                <textarea name="problemSolved" rows="3" placeholder="Describe brevemente qué hace tu proyecto..." required></textarea>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Semestre</label>
+                                    <input type="number" name="semester" min="1" max="10" placeholder="1-10" required />
+                                </div>
+                                <div className="form-group">
+                                    <label>Demo URL (Opcional)</label>
+                                    <input type="url" name="demoUrl" placeholder="https://..." />
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Stack Tecnológico (separado por comas)</label>
+                                <input type="text" name="techStack" placeholder="React, Node.js, Firebase" required />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Captura del Proyecto (Imagen)</label>
+                                <input type="file" name="image" accept="image/*" required />
+                            </div>
+
+                            <button type="submit" className="submit-btn" disabled={isUploading}>
+                                {isUploading ? "Subiendo..." : "Publicar Proyecto"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             <footer className="dashboard-footer">
                 <div className="footer-left">
