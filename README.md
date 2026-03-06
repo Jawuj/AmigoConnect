@@ -19,3 +19,8 @@ Los proyectos se pueden ordenar por fecha.
 - Vite
 - Firebase
 
+## To do
+
+- [] Detalles de las vacantes al dar click (Como en proyectos, más simple)
+- [] Arreglar login (Aun estando logeado, te pide los datos una y otra vez)
+ 

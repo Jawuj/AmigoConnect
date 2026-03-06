@@ -49,6 +49,7 @@ function App() {
 
     // Gestión de Vistas
     const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'profile' | 'details' | 'opportunities'
+    const [viewedUserId, setViewedUserId] = useState(null);
     const [selectedProjectId, setSelectedProjectId] = useState(null);
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [isOppModalOpen, setIsOppModalOpen] = useState(false);
@@ -527,6 +528,7 @@ function App() {
     };
 
     const handleProfileClick = () => {
+        setViewedUserId(null);
         setActiveView('profile');
     };
 
@@ -538,6 +540,7 @@ function App() {
     const goToDashboard = () => {
         setActiveView('dashboard');
         setSelectedProjectId(null);
+        setViewedUserId(null);
     };
 
     if (authLoading) return <div className="loading-screen">Cargando...</div>;
@@ -942,7 +945,7 @@ function App() {
                                                     </div>
                                                 </div>
                                                 <div className="card-footer">
-                                                    <div className="author-info">
+                                                    <div className="author-info" onClick={(e) => { e.stopPropagation(); setViewedUserId(project.authorId); setActiveView('profile'); }} style={{ cursor: 'pointer' }}>
                                                         <div className="author-avatar">
                                                             {projectAuthor.avatarUrl ? (
                                                                 <img src={projectAuthor.avatarUrl} alt={projectAuthor.name} />
@@ -1097,131 +1100,141 @@ function App() {
                 </div>
             )}
 
-            {activeView === 'profile' && (
-                <div className="profile-view">
-                    <div className="profile-header-card">
-                        <div className="profile-info-main">
-                            <div className="profile-avatar-large">
-                                {profile?.avatarUrl ? (
-                                    <img src={profile.avatarUrl} alt="Yo" />
-                                ) : (
-                                    <div className="author-avatar" style={{ width: '100%', height: '100%', fontSize: '3rem' }}>
-                                        {(profile?.name || user?.displayName || 'U').charAt(0)}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="profile-details-text">
-                                {isEditingProfile ? (
-                                    <form onSubmit={handleUpdateProfile} className="edit-profile-form">
-                                        <div className="form-group-inline">
-                                            <input type="text" name="name" defaultValue={profile?.name || user?.displayName} placeholder="Nombre" required />
-                                            <input type="number" step="0.1" name="academicAverage" defaultValue={profile?.academicAverage} placeholder="Promedio Académico" />
+            {activeView === 'profile' && (() => {
+                const isOwnProfile = !viewedUserId || viewedUserId === user?.uid;
+                const displayProfile = isOwnProfile ? profile : (users[viewedUserId] || {});
+                return (
+                    <div className="profile-view">
+                        <div className="profile-header-card">
+                            <div className="profile-info-main">
+                                <div className="profile-avatar-large">
+                                    {displayProfile?.avatarUrl ? (
+                                        <img src={displayProfile.avatarUrl} alt="Yo" />
+                                    ) : (
+                                        <div className="author-avatar" style={{ width: '100%', height: '100%', fontSize: '3rem' }}>
+                                            {(displayProfile?.name || (!isOwnProfile ? 'U' : user?.displayName) || 'U').charAt(0)}
                                         </div>
-                                        <div className="form-row">
-                                            <input type="text" name="program" defaultValue={profile?.program} placeholder="Carrera" required />
-                                            <input type="number" name="semester" defaultValue={profile?.semester} placeholder="Semestre" required />
-                                        </div>
-                                        <input type="text" name="technicalSkills" defaultValue={profile?.technicalSkills?.join(', ')} placeholder="Habilidades Técnicas (separadas por coma)" />
-                                        <input type="text" name="softSkills" defaultValue={profile?.softSkills?.join(', ')} placeholder="Habilidades Blandas (separadas por coma)" />
-                                        <input type="text" name="github" defaultValue={profile?.github} placeholder="Link de Github" />
-                                        <div className="form-actions-inline">
-                                            <button type="submit" className="primary-action-btn"><Icons.Check /> Guardar Perfil Profesional</button>
-                                            <button type="button" className="secondary-action-btn" onClick={() => setIsEditingProfile(false)}>Cancelar</button>
-                                        </div>
-                                    </form>
-                                ) : (
-                                    <>
-                                        <h1>{profile?.name || user?.displayName}</h1>
-                                        <div className="profile-subtext">
-                                            <span><Icons.School /> {profile?.program} • Semestre {profile?.semester}</span>
-                                            {profile?.academicAverage && <span className="badge-gpa">Promedio: {profile.academicAverage}</span>}
-                                            <span><Icons.Mail /> {user?.email}</span>
-                                            {profile?.github && (
-                                                <a href={profile.github.startsWith('http') ? profile.github : `https://github.com/${profile.github}`} target="_blank" rel="noopener noreferrer" className="profile-link">
-                                                    <Icons.Github /> Perfil Github
-                                                </a>
-                                            )}
-                                        </div>
-
-                                        {(profile?.technicalSkills?.length > 0 || profile?.softSkills?.length > 0) && (
-                                            <div className="profile-skills-summary">
-                                                {profile?.technicalSkills?.slice(0, 5).map(s => <span key={s} className="skill-chip">{s}</span>)}
-                                                {profile?.technicalSkills?.length > 5 && <span className="skill-chip more">+{profile.technicalSkills.length - 5}</span>}
+                                    )}
+                                </div>
+                                <div className="profile-details-text">
+                                    {(isOwnProfile && isEditingProfile) ? (
+                                        <form onSubmit={handleUpdateProfile} className="edit-profile-form">
+                                            <div className="form-group-inline">
+                                                <input type="text" name="name" defaultValue={displayProfile?.name || user?.displayName} placeholder="Nombre" required />
+                                                <input type="number" step="0.1" name="academicAverage" defaultValue={displayProfile?.academicAverage} placeholder="Promedio Académico" />
                                             </div>
-                                        )}
-                                    </>
-                                )}
-                            </div>
-                        </div>
-                        {!isEditingProfile && (
-                            <button className="edit-profile-btn" onClick={() => setIsEditingProfile(true)}>
-                                <Icons.Edit /> Editar Perfil
-                            </button>
-                        )}
-                    </div>
+                                            <div className="form-row">
+                                                <input type="text" name="program" defaultValue={displayProfile?.program} placeholder="Carrera" required />
+                                                <input type="number" name="semester" defaultValue={displayProfile?.semester} placeholder="Semestre" required />
+                                            </div>
+                                            <input type="text" name="technicalSkills" defaultValue={displayProfile?.technicalSkills?.join(', ')} placeholder="Habilidades Técnicas (separadas por coma)" />
+                                            <input type="text" name="softSkills" defaultValue={displayProfile?.softSkills?.join(', ')} placeholder="Habilidades Blandas (separadas por coma)" />
+                                            <input type="text" name="github" defaultValue={displayProfile?.github} placeholder="Link de Github" />
+                                            <div className="form-actions-inline">
+                                                <button type="submit" className="primary-action-btn"><Icons.Check /> Guardar Perfil Profesional</button>
+                                                <button type="button" className="secondary-action-btn" onClick={() => setIsEditingProfile(false)}>Cancelar</button>
+                                            </div>
+                                        </form>
+                                    ) : (
+                                        <>
+                                            <h1>{displayProfile?.name || (!isOwnProfile ? '' : user?.displayName)}</h1>
+                                            <div className="profile-subtext">
+                                                {displayProfile?.program && <span><Icons.School /> {displayProfile?.program} {displayProfile?.semester ? `• Semestre ${displayProfile.semester}` : ''}</span>}
+                                                {displayProfile?.academicAverage && <span className="badge-gpa">Promedio: {displayProfile.academicAverage}</span>}
+                                                {(isOwnProfile || displayProfile?.mail) && <span><Icons.Mail /> {displayProfile?.mail || (isOwnProfile ? user?.email : '')}</span>}
+                                                {displayProfile?.github && (
+                                                    <a href={displayProfile.github.startsWith('http') ? displayProfile.github : `https://github.com/${displayProfile.github}`} target="_blank" rel="noopener noreferrer" className="profile-link">
+                                                        <Icons.Github /> Perfil Github
+                                                    </a>
+                                                )}
+                                            </div>
 
-                    <div className="profile-sections-grid">
-                        <section>
-                            <h3 className="profile-section-title">
-                                {profile?.role === 'teacher' ? 'Información Profesional' : 'Mi Hoja de Vida'}
-                            </h3>
-                            <div className="resume-upload-section">
-                                {profile?.role === 'teacher' ? (
-                                    <div className="teacher-info-card">
-                                        <p><strong>Docente de la facultad:</strong> {profile?.program}</p>
-                                        <p><strong>Contacto:</strong> {profile?.mail}</p>
-                                        {profile?.github && (
-                                            <a href={profile.github} target="_blank" rel="noopener noreferrer" className="resume-link">
-                                                <Icons.External /> Perfil Profesional
-                                            </a>
-                                        )}
-                                    </div>
-                                ) : profile?.resumeUrl ? (
-                                    <div>
-                                        <p>✅ Hoja de vida cargada correctamente.</p>
-                                        <a href={profile.resumeUrl} target="_blank" rel="noopener noreferrer" className="resume-link">
-                                            <Icons.External /> Ver documento actual
-                                        </a>
-                                    </div>
-                                ) : (
-                                    <div>
-                                        <p>Aún no has subido tu hoja de vida.</p>
-                                        <button className="secondary-action-btn" style={{ maxWidth: '200px', margin: '10px auto' }} onClick={() => alert("Próximamente: Subir PDF")}>
-                                            <Icons.Upload /> Subir PDF
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        </section>
-
-                        <section>
-                            <h3 className="profile-section-title">
-                                {profile?.role === 'teacher' ? 'Proyectos Validados por mí' : `Mis Proyectos (${projects.filter(p => p.authorId === user.uid).length})`}
-                            </h3>
-                            <div className="project-grid">
-                                {projects
-                                    .filter(p => profile?.role === 'teacher' ? p.validatedBy === user.uid : p.authorId === user.uid)
-                                    .map(project => (
-                                        <article key={project.id} className="project-card" onClick={() => handleProjectClick(project.id)} style={{ cursor: 'pointer' }}>
-                                            <div className="card-banner" style={{ backgroundImage: `url(${project.imageUrl})`, backgroundSize: 'cover' }}>
-                                                <div className="banner-badges">
-                                                    <span className="tag-semester">Semestre {project.semester}</span>
+                                            {(displayProfile?.technicalSkills?.length > 0 || displayProfile?.softSkills?.length > 0) && (
+                                                <div className="profile-skills-summary">
+                                                    {displayProfile?.technicalSkills?.slice(0, 5).map(s => <span key={s} className="skill-chip">{s}</span>)}
+                                                    {displayProfile?.technicalSkills?.length > 5 && <span className="skill-chip more">+{displayProfile.technicalSkills.length - 5}</span>}
                                                 </div>
-                                            </div>
-                                            <div className="card-body">
-                                                <h3 className="card-title">{project.title}</h3>
-                                                <small className="tech-stack">{Array.isArray(project.techStack) ? project.techStack.slice(0, 2).join(', ') : project.techStack}</small>
-                                            </div>
-                                        </article>
-                                    ))}
-                                {projects.filter(p => profile?.role === 'teacher' ? p.validatedBy === user.uid : p.authorId === user.uid).length === 0 && (
-                                    <p>{profile?.role === 'teacher' ? 'Aún no has validado proyectos.' : 'Aún no has publicado proyectos.'}</p>
-                                )}
+                                            )}
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                        </section>
+                            {(isOwnProfile && !isEditingProfile) && (
+                                <button className="edit-profile-btn" onClick={() => setIsEditingProfile(true)}>
+                                    <Icons.Edit /> Editar Perfil
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="profile-sections-grid">
+                            {(!isOwnProfile || displayProfile?.role === 'teacher' || displayProfile?.resumeUrl) && (
+                                <section>
+                                    <h3 className="profile-section-title">
+                                        {displayProfile?.role === 'teacher' ? 'Información Profesional' : 'Hoja de Vida'}
+                                    </h3>
+                                    <div className="resume-upload-section">
+                                        {displayProfile?.role === 'teacher' ? (
+                                            <div className="teacher-info-card">
+                                                {displayProfile?.program && <p><strong>Docente de la facultad:</strong> {displayProfile?.program}</p>}
+                                                {(displayProfile?.mail || isOwnProfile) && <p><strong>Contacto:</strong> {displayProfile?.mail || (isOwnProfile ? user?.email : '')}</p>}
+                                                {displayProfile?.github && (
+                                                    <a href={displayProfile.github} target="_blank" rel="noopener noreferrer" className="resume-link">
+                                                        <Icons.External /> Perfil Profesional
+                                                    </a>
+                                                )}
+                                            </div>
+                                        ) : displayProfile?.resumeUrl ? (
+                                            <div>
+                                                <p>✅ Hoja de vida {isOwnProfile ? 'cargada correctamente' : 'disponible'}.</p>
+                                                <a href={displayProfile.resumeUrl} target="_blank" rel="noopener noreferrer" className="resume-link">
+                                                    <Icons.External /> Ver documento {isOwnProfile ? 'actual' : ''}
+                                                </a>
+                                            </div>
+                                        ) : (
+                                            isOwnProfile && (
+                                                <div>
+                                                    <p>Aún no has subido tu hoja de vida.</p>
+                                                    <button className="secondary-action-btn" style={{ maxWidth: '200px', margin: '10px auto' }} onClick={() => alert("Próximamente: Subir PDF")}>
+                                                        <Icons.Upload /> Subir PDF
+                                                    </button>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                </section>
+                            )}
+
+                            <section>
+                                <h3 className="profile-section-title">
+                                    {displayProfile?.role === 'teacher'
+                                        ? `Proyectos Validados por ${isOwnProfile ? 'mí' : displayProfile.name?.split(' ')[0]}`
+                                        : `${isOwnProfile ? 'Mis Proyectos' : `Proyectos de ${displayProfile?.name?.split(' ')[0]}`} (${projects.filter(p => p.authorId === (isOwnProfile ? user.uid : viewedUserId)).length})`}
+                                </h3>
+                                <div className="project-grid">
+                                    {projects
+                                        .filter(p => displayProfile?.role === 'teacher' ? p.validatedBy === (isOwnProfile ? user.uid : viewedUserId) : p.authorId === (isOwnProfile ? user.uid : viewedUserId))
+                                        .map(project => (
+                                            <article key={project.id} className="project-card" onClick={() => handleProjectClick(project.id)} style={{ cursor: 'pointer' }}>
+                                                <div className="card-banner" style={{ backgroundImage: `url(${project.imageUrl})`, backgroundSize: 'cover' }}>
+                                                    <div className="banner-badges">
+                                                        <span className="tag-semester">Semestre {project.semester}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="card-body">
+                                                    <h3 className="card-title">{project.title}</h3>
+                                                    <small className="tech-stack">{Array.isArray(project.techStack) ? project.techStack.slice(0, 2).join(', ') : project.techStack}</small>
+                                                </div>
+                                            </article>
+                                        ))}
+                                    {projects.filter(p => displayProfile?.role === 'teacher' ? p.validatedBy === (isOwnProfile ? user.uid : viewedUserId) : p.authorId === (isOwnProfile ? user.uid : viewedUserId)).length === 0 && (
+                                        <p>{displayProfile?.role === 'teacher' ? (isOwnProfile ? 'Aún no has validado proyectos.' : 'Aún no ha validado proyectos.') : (isOwnProfile ? 'Aún no has publicado proyectos.' : 'Aún no ha publicado proyectos.')}</p>
+                                    )}
+                                </div>
+                            </section>
+                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {activeView === 'details' && selectedProjectId && (
                 <div className="details-view">
@@ -1248,7 +1261,7 @@ function App() {
                                             </div>
                                             <h1>{project.title}</h1>
 
-                                            <div className="author-strip" onClick={() => setActiveView('profile')} style={{ cursor: 'pointer' }}>
+                                            <div className="author-strip" onClick={() => { setViewedUserId(project.authorId); setActiveView('profile'); }} style={{ cursor: 'pointer' }}>
                                                 {author.avatarUrl ? <img src={author.avatarUrl} alt={author.name} /> : <div className="author-avatar">{(author.name || 'U').charAt(0)}</div>}
                                                 <div>
                                                     <strong>{author.name}</strong> • <small>{author.program}</small>
