@@ -10,7 +10,7 @@ const db = admin.firestore();
 const teachers = [
     { email: 'profesor.perez@amigo.edu.co', fullName: 'Juan Pérez', faculty: 'Ingeniería' },
     { email: 'marisela.rojas@amigo.edu.co', fullName: 'Marisela Rojas', faculty: 'Tecnología' },
-    { email: 'jawujj@gmail.com', fullName: 'DDDDD DDDD', faculty: 'Tecnología' },
+    { email: 'jawujj@gmail.com', fullName: 'DDDDD DDDmun', faculty: 'Tecnología' },
 
 ];
 

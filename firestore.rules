@@ -34,7 +34,8 @@ service cloud.firestore {
 
     match /opportunities/{oppId} {
       allow read: if true;
-      allow create, update: if request.auth != null && getRole() == 'company';
+      allow create: if request.auth != null && getRole() == 'company';
+      allow update: if request.auth != null && (getRole() == 'company' || getRole() == 'teacher');
       allow delete: if request.auth != null && (getRole() == 'company' && request.auth.uid == resource.data.companyId);
     }
   }

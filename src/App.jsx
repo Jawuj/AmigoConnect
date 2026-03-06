@@ -19,7 +19,8 @@ const Icons = {
     School: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>,
     Mail: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
     Github: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>,
-    X: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    X: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+    Shield: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
 };
 
 function App() {
@@ -75,18 +76,16 @@ function App() {
                     let assignedRole = 'student';
                     if (teacherSnap.exists()) {
                         assignedRole = 'teacher';
-                    } else if (companySnap.exists() && domain !== '@amigo.edu.co') {
-                        // Dominios externos whitelisteados son empresas
-                        assignedRole = 'company';
-                    } else if (companySnap.exists() && domain === '@amigo.edu.co') {
-                        // Caso especial: La universidad puede ser empresa en el whitelist, 
-                        // pero solo si el usuario no es un docente (ya checado arriba) 
-                        // y si queremos que sea empresa por defecto. 
-                        // Por seguridad, para el dominio institucional, si no es profe, es estudiante.
-                        assignedRole = 'student';
+                    } else if (companySnap.exists()) {
+                        if (domain === '@amigo.edu.co') {
+                            // Institucional -> Solo es empresa si NO es docente (ya checado) 
+                            // y si decidimos permitir empresas con este dominio. 
+                            // Por defecto para seguridad, si no es docente, lo tratamos como estudiante.
+                            assignedRole = 'student';
+                        } else {
+                            assignedRole = 'company';
+                        }
                     }
-
-                    setUserRole(assignedRole);
 
                     // 2. Obtener y sincronizar perfil
                     const userRef = doc(db, "users", currentUser.uid);
@@ -94,38 +93,48 @@ function App() {
 
                     if (docSnap.exists()) {
                         const userData = docSnap.data();
+                        console.log("Perfil detectado:", userData.role, "Whitelist dice:", assignedRole);
 
-                        // Sincronizar nombre si es empresa/profe y cambio en whitelist
-                        if (assignedRole === 'company' && companySnap.exists()) {
-                            const companyName = companySnap.data().name;
-                            if (userData.name !== companyName) {
-                                await updateDoc(userRef, { name: companyName });
-                                userData.name = companyName;
-                            }
-                        } else if (assignedRole === 'teacher' && teacherSnap.exists()) {
-                            const teacherName = teacherSnap.data().fullName;
-                            if (userData.name !== teacherName) {
-                                await updateDoc(userRef, { name: teacherName });
-                                userData.name = teacherName;
-                            }
+                        // Prioridad: Si el perfil ya tiene un rol 'teacher' o 'company', 
+                        // y el whitelist no lo contradice por ser de mayor rango, lo mantenemos.
+                        let finalRole = userData.role || assignedRole;
+
+                        // Sincronización forzada desde Whitelist (Whitelist manda si eres Profe/Empresa)
+                        if (assignedRole === 'teacher' || assignedRole === 'company') {
+                            finalRole = assignedRole;
                         }
 
-                        // Sincronizar rol si cambio en whitelist
-                        if (userData.role !== assignedRole && assignedRole !== 'student') {
-                            await updateDoc(userRef, { role: assignedRole });
-                            userData.role = assignedRole;
+                        // Guardar rol final en estado
+                        setUserRole(finalRole);
+
+                        // Sincronizar cambios en Firestore si es necesario
+                        const updates = {};
+                        if (userData.role !== finalRole) updates.role = finalRole;
+
+                        if (finalRole === 'company' && companySnap.exists()) {
+                            const companyName = companySnap.data().name;
+                            if (userData.name !== companyName) updates.name = companyName;
+                        } else if (finalRole === 'teacher' && teacherSnap.exists()) {
+                            const teacherName = teacherSnap.data().fullName;
+                            if (userData.name !== teacherName) updates.name = teacherName;
+                        }
+
+                        if (Object.keys(updates).length > 0) {
+                            await updateDoc(userRef, updates);
+                            Object.assign(userData, updates);
                         }
 
                         setProfile(userData);
                     } else if (assignedRole !== 'student') {
                         // Caso especial: Primer login de Profe o Empresa, crear perfil base automático
+                        console.log("Auto-creando perfil para:", assignedRole);
                         const whitelistData = assignedRole === 'teacher' ? teacherSnap.data() : companySnap.data();
                         const initialProfile = {
                             uid: currentUser.uid,
                             name: assignedRole === 'teacher' ? whitelistData.fullName : whitelistData.name,
                             mail: email,
                             role: assignedRole,
-                            program: assignedRole === 'teacher' ? whitelistData.faculty : "Entidad Externa",
+                            program: assignedRole === 'teacher' ? (whitelistData.faculty || "Facultad") : "Entidad Externa",
                             avatarUrl: currentUser.photoURL || "",
                             createdAt: new Date().toISOString(),
                             dni: "S/N",
@@ -134,9 +143,11 @@ function App() {
                             github: ""
                         };
                         await setDoc(userRef, initialProfile);
+                        setUserRole(assignedRole);
                         setProfile(initialProfile);
                     } else {
-                        // Es estudiante sin perfil -> Mostrará Onboarding
+                        // Estudiante sin perfil -> Se queda en profile null para Onboarding
+                        setUserRole('student');
                         setProfile(null);
                     }
                 } else {
@@ -144,7 +155,7 @@ function App() {
                     setUserRole(null);
                 }
             } catch (error) {
-                console.error("Error en el listener de autenticación:", error);
+                console.error("Error crítico en Auth Listener:", error);
             } finally {
                 setAuthLoading(false);
             }
@@ -220,16 +231,19 @@ function App() {
             const email = result.user.email;
             const domain = email.substring(email.lastIndexOf("@"));
 
-            // 1. Validar dominios permitidos
-            // Permitimos: @amigo.edu.co, soporte, o dominios en whitelist_companies
-            const companyWhitelistRef = doc(db, "whitelist_companies", domain);
-            const companyWhitelistSnap = await getDoc(companyWhitelistRef);
-
+            // 1. Validar dominios y whitelist
             const isInstitutional = email.endsWith('@amigo.edu.co');
             const isSupport = email === 'amigoconnect.support@gmail.com';
-            const isAuthorizedCompany = companyWhitelistSnap.exists();
 
-            if (!isInstitutional && !isSupport && !isAuthorizedCompany) {
+            const [companySnap, teacherSnap] = await Promise.all([
+                getDoc(doc(db, "whitelist_companies", domain)),
+                getDoc(doc(db, "whitelist_teachers", email))
+            ]);
+
+            const isAuthorizedCompany = companySnap.exists();
+            const isAuthorizedTeacher = teacherSnap.exists();
+
+            if (!isInstitutional && !isSupport && !isAuthorizedCompany && !isAuthorizedTeacher) {
                 alert("Acceso denegado. Este correo o dominio no está autorizado.");
                 await signOut(auth);
                 return;
@@ -428,10 +442,7 @@ function App() {
         const isCurrentlyApproved = project.approvalStatus === 'approved';
         try {
             await updateDoc(doc(db, "projects", project.id), {
-                approvalStatus: isCurrentlyApproved ? 'pending' : 'approved',
-                isValidated: !isCurrentlyApproved,
-                validatedBy: isCurrentlyApproved ? null : user.uid,
-                validatedAt: isCurrentlyApproved ? null : serverTimestamp()
+                approvalStatus: isCurrentlyApproved ? 'pending' : 'approved'
             });
 
             if (!isCurrentlyApproved) {
@@ -448,6 +459,20 @@ function App() {
         }
     };
 
+    const handleToggleValidation = async (project) => {
+        if (userRole !== 'teacher') return;
+        const isCurrentlyValidated = project.isValidated;
+        try {
+            await updateDoc(doc(db, "projects", project.id), {
+                isValidated: !isCurrentlyValidated,
+                validatedBy: isCurrentlyValidated ? null : user.uid,
+                validatedAt: isCurrentlyValidated ? null : serverTimestamp()
+            });
+            alert(isCurrentlyValidated ? "Validación removida" : "Proyecto validado con éxito");
+        } catch (error) {
+            console.error("Error al procesar validación:", error);
+        }
+    };
     const handleRejectProject = async (project) => {
         if (userRole !== 'teacher') return;
         const reason = prompt("Indica el motivo del rechazo para el estudiante:");
@@ -846,27 +871,51 @@ function App() {
                                                         backgroundSize: 'cover',
                                                         backgroundPosition: 'center'
                                                     }}>
-                                                    <span className="tag-semester">Semestre {project.semester || 'N/A'}</span>
-                                                    {project.isValidated && <span className="badge-validated">Validado</span>}
-                                                    {project.approvalStatus === 'pending' && <span className="badge-pending">Pendiente</span>}
-                                                    {project.approvalStatus === 'rejected' && <span className="badge-rejected">Rechazado</span>}
+                                                    <div className="banner-badges">
+                                                        <span className="tag-semester">Semestre {project.semester || 'N/A'}</span>
+                                                        {project.isValidated && <span className="badge-validated">Validado</span>}
+                                                        {project.approvalStatus === 'pending' && <span className="badge-pending">Pendiente</span>}
+                                                        {project.approvalStatus === 'rejected' && <span className="badge-rejected">Rechazado</span>}
+                                                    </div>
                                                 </div>
-                                                {/* Validación (Profe) */}
+                                                {/* Acciones de Docente (Control Unificado) */}
                                                 {userRole === 'teacher' && (
-                                                    <div className="card-actions-validation">
+                                                    <div className="card-teacher-actions">
                                                         <button
-                                                            className={`btn-approve-toggle ${project.approvalStatus === 'approved' ? 'approved' : ''}`}
+                                                            className={`action-dot ${project.approvalStatus === 'approved' ? 'approved' : ''}`}
                                                             onClick={(e) => { e.stopPropagation(); handleApproveProject(project); }}
                                                             title={project.approvalStatus === 'approved' ? "Desaprobar" : "Aprobar"}
                                                         >
                                                             {project.approvalStatus === 'approved' ? <Icons.X /> : <Icons.Check />}
-                                                            {project.approvalStatus === 'approved' ? 'Desaprobar' : 'Aprobar'}
+                                                        </button>
+                                                        {project.approvalStatus === 'pending' && (
+                                                            <button
+                                                                className="action-dot reject"
+                                                                onClick={(e) => { e.stopPropagation(); handleRejectProject(project); }}
+                                                                title="Rechazar"
+                                                            >
+                                                                <Icons.X />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            className={`action-dot validate ${project.isValidated ? 'active' : ''}`}
+                                                            onClick={(e) => { e.stopPropagation(); handleToggleValidation(project); }}
+                                                            title={project.isValidated ? "Quitar Validación" : "Validar"}
+                                                        >
+                                                            <Icons.Shield />
+                                                        </button>
+                                                        <button
+                                                            className="action-dot edit"
+                                                            onClick={(e) => { e.stopPropagation(); setEditingProject(project); setIsUploadModalOpen(true); }}
+                                                            title="Editar"
+                                                        >
+                                                            <Icons.Edit />
                                                         </button>
                                                     </div>
                                                 )}
 
-                                                {/* Edición (Autor/Profe) */}
-                                                {(isAuthor || userRole === 'teacher') && (
+                                                {/* Edición (Solo Autor para no solapar con acciones de profe) */}
+                                                {(isAuthor && userRole !== 'teacher') && (
                                                     <button
                                                         className="edit-card-btn"
                                                         onClick={(e) => {
@@ -877,38 +926,6 @@ function App() {
                                                         title="Editar Proyecto"
                                                     >
                                                         <Icons.Edit />
-                                                    </button>
-                                                )}
-
-                                                {/* Acciones de Aprobación (Solo Docente + Pendiente) */}
-                                                {userRole === 'teacher' && project.approvalStatus === 'pending' && (
-                                                    <div className="approval-actions">
-                                                        <button
-                                                            className="approve-btn"
-                                                            onClick={(e) => { e.stopPropagation(); handleApproveProject(project); }}
-                                                            title="Aprobar Proyecto"
-                                                        >
-                                                            <Icons.Check />
-                                                        </button>
-                                                        <button
-                                                            className="reject-btn"
-                                                            onClick={(e) => { e.stopPropagation(); handleRejectProject(project); }}
-                                                            title="Rechazar"
-                                                        >
-                                                            <Icons.X />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                                {userRole === 'teacher' && (
-                                                    <button
-                                                        className={`validate-card-btn ${project.isValidated ? 'unvalidate' : ''}`}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleToggleValidation(project);
-                                                        }}
-                                                        title={project.isValidated ? "Quitar Validación" : "Validar Proyecto"}
-                                                    >
-                                                        <Icons.Check />
                                                     </button>
                                                 )}
                                                 <div className="card-body">
@@ -1034,27 +1051,40 @@ function App() {
 
                                             {/* Validación de Vacantes (Docente/Coordinador) */}
                                             {userRole === 'teacher' && (
-                                                <div className="opp-approval-bar">
+                                                <div className="card-teacher-actions" style={{ position: 'relative', background: 'transparent', boxShadow: 'none' }}>
                                                     <button
-                                                        className={`btn-approve-toggle ${opp.approvalStatus === 'approved' ? 'approved' : ''}`}
-                                                        onClick={async () => {
+                                                        className={`action-dot ${opp.approvalStatus === 'approved' ? 'approved' : ''}`}
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
                                                             const isCurrentlyApproved = opp.approvalStatus === 'approved';
-                                                            await updateDoc(doc(db, "opportunities", opp.id), {
-                                                                approvalStatus: isCurrentlyApproved ? 'pending' : 'approved'
-                                                            });
-                                                            alert(isCurrentlyApproved ? "Vacante desaprobada" : "Vacante aprobada");
+                                                            try {
+                                                                await updateDoc(doc(db, "opportunities", opp.id), {
+                                                                    approvalStatus: isCurrentlyApproved ? 'pending' : 'approved'
+                                                                });
+                                                                alert(isCurrentlyApproved ? "Vacante desaprobada" : "Vacante aprobada");
+                                                            } catch (error) {
+                                                                console.error("Error updating opp", error);
+                                                            }
                                                         }}
+                                                        title={opp.approvalStatus === 'approved' ? 'Desaprobar Publicación' : 'Aprobar Publicación'}
                                                     >
-                                                        {opp.approvalStatus === 'approved' ? 'Desaprobar Publicación' : 'Aprobar Publicación'}
+                                                        {opp.approvalStatus === 'approved' ? <Icons.X /> : <Icons.Check />}
                                                     </button>
                                                     {opp.approvalStatus === 'pending' && (
-                                                        <button className="reject-btn" onClick={async () => {
+                                                        <button className="action-dot reject" onClick={async (e) => {
+                                                            e.stopPropagation();
                                                             const reason = prompt("Motivo del rechazo:");
                                                             if (reason) {
-                                                                await updateDoc(doc(db, "opportunities", opp.id), { approvalStatus: 'rejected' });
-                                                                alert("Vacante rechazada");
+                                                                try {
+                                                                    await updateDoc(doc(db, "opportunities", opp.id), { approvalStatus: 'rejected' });
+                                                                    alert("Vacante rechazada");
+                                                                } catch (error) {
+                                                                    console.error("Error rejecting opp", error);
+                                                                }
                                                             }
-                                                        }}>Rechazar</button>
+                                                        }} title="Rechazar">
+                                                            <Icons.X />
+                                                        </button>
                                                     )}
                                                 </div>
                                             )}
@@ -1174,7 +1204,9 @@ function App() {
                                     .map(project => (
                                         <article key={project.id} className="project-card" onClick={() => handleProjectClick(project.id)} style={{ cursor: 'pointer' }}>
                                             <div className="card-banner" style={{ backgroundImage: `url(${project.imageUrl})`, backgroundSize: 'cover' }}>
-                                                <span className="tag-semester">Semestre {project.semester}</span>
+                                                <div className="banner-badges">
+                                                    <span className="tag-semester">Semestre {project.semester}</span>
+                                                </div>
                                             </div>
                                             <div className="card-body">
                                                 <h3 className="card-title">{project.title}</h3>
@@ -1280,7 +1312,12 @@ function App() {
                                                     🚀 Ver Demo Online
                                                 </a>
                                             )}
-                                            <button className="secondary-action-btn">⭐ Guardar en Favoritos</button>
+                                            <button
+                                                className={`secondary-action-btn ${profile?.favorites?.includes(project.id) ? 'active' : ''}`}
+                                                onClick={() => handleToggleFavorite(project.id)}
+                                            >
+                                                {profile?.favorites?.includes(project.id) ? '⭐ Guardado' : '☆ Guardar en Favoritos'}
+                                            </button>
                                         </div>
                                     </aside>
                                 </div>
@@ -1290,7 +1327,11 @@ function App() {
                                     <div className="project-grid">
                                         {projects.filter(p => p.authorId === project.authorId && p.id !== project.id).slice(0, 3).map(p => (
                                             <article key={p.id} className="project-card" onClick={() => handleProjectClick(p.id)} style={{ cursor: 'pointer' }}>
-                                                <div className="card-banner" style={{ backgroundImage: `url(${p.imageUrl})`, backgroundSize: 'cover' }}></div>
+                                                <div className="card-banner" style={{ backgroundImage: `url(${p.imageUrl})`, backgroundSize: 'cover' }}>
+                                                    <div className="banner-badges">
+                                                        <span className="tag-semester">Semestre {p.semester}</span>
+                                                    </div>
+                                                </div>
                                                 <div className="card-body">
                                                     <h3 className="card-title">{p.title}</h3>
                                                 </div>
