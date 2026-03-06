@@ -132,7 +132,8 @@
 .section-title {
     font-size: 1.5rem;
     margin: 0;
-    color: #333;
+    color: var(--primary-color);
+    font-weight: 800;
 }
 
 /* --- Project Grid --- */
@@ -177,17 +178,86 @@
 
 .badge-validated {
     position: absolute;
-    top: 15px;
-    right: 15px;
+    top: 45px;
+    left: 15px;
     background: #28a745;
     color: white;
-    padding: 3px 8px;
+    padding: 3px 10px;
     border-radius: 12px;
     font-size: 0.7rem;
     font-weight: bold;
     display: flex;
     align-items: center;
     gap: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.badge-pending {
+    position: absolute;
+    top: 45px;
+    left: 15px;
+    background: #ff9800;
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.badge-rejected {
+    position: absolute;
+    top: 45px;
+    left: 15px;
+    background: #dc3545;
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.approval-actions {
+    position: absolute;
+    bottom: 15px;
+    right: 55px;
+    /* Lado del botón editar */
+    display: flex;
+    gap: 8px;
+}
+
+.approve-btn,
+.reject-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    color: white;
+}
+
+.approve-btn {
+    background: #28a745;
+}
+
+.approve-btn:hover {
+    background: #218838;
+    transform: scale(1.1);
+}
+
+.reject-btn {
+    background: #dc3545;
+}
+
+.reject-btn:hover {
+    background: #c82333;
+    transform: scale(1.1);
 }
 
 .edit-card-btn {
@@ -498,15 +568,38 @@
 .opp-card {
     background: white;
     border-radius: 12px;
-    padding: 20px;
+    padding: 24px;
     box-shadow: var(--shadow-sm);
     border: 1px solid rgba(0, 0, 0, 0.05);
     transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    position: relative;
+}
+
+.opp-card.pending {
+    border: 2px dashed #ff9800;
+    background: #fffdfa;
 }
 
 .opp-card:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow-md);
+}
+
+.opp-approval-bar {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.opp-approval-bar button {
+    flex: 1;
+    padding: 10px;
+    font-size: 0.85rem;
 }
 
 .opp-header {
@@ -564,4 +657,189 @@
     border-radius: 6px;
     font-size: 0.8rem;
     font-weight: 600;
+}
+
+.opp-footer {
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.opp-contact-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.opp-contact-info svg {
+    color: var(--primary-color);
+    opacity: 0.7;
+}
+
+/* Ajuste para el botón de publicar */
+.opportunities-view .primary-action-btn {
+    width: auto;
+    padding: 10px 24px;
+    font-size: 0.9rem;
+}
+
+.opportunities-view .section-header,
+.projects-view .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    gap: 20px;
+}
+
+.view-tab {
+    background: #f0f2f5;
+    border: 1px solid #ddd;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #555;
+    white-space: nowrap;
+}
+
+.view-tab.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.btn-favorite {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s;
+    z-index: 10;
+    font-size: 1.2rem;
+}
+
+.btn-favorite.active {
+    color: #ff9800;
+    transform: scale(1.1);
+}
+
+.btn-favorite:hover {
+    transform: scale(1.15);
+}
+
+.btn-approve-toggle {
+    background: #f0f2f5;
+    color: #555;
+    border: 1px solid #ddd;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-approve-toggle.approved {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-color: #c8e6c9;
+}
+
+.btn-approve-toggle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.card-actions-validation {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10;
+}
+
+.header-actions-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.view-tabs {
+    margin-bottom: 0px !important;
+    /* Reset for header row */
+}
+
+.btn-favorite-opp {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    z-index: 5;
+    color: #ccc;
+    transition: all 0.2s;
+}
+
+.btn-favorite-opp.active {
+    color: #ff9800;
+}
+
+.header-actions-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+/* Teacher Profile Styles */
+.teacher-info-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 20px;
+    border-radius: 12px;
+    line-height: 1.6;
+}
+
+.teacher-info-card p {
+    margin: 8px 0;
+    color: var(--text-secondary);
+}
+
+.teacher-info-card strong {
+    color: var(--text-primary);
+}
+
+.resume-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.resume-link:hover {
+    text-decoration: underline;
 }

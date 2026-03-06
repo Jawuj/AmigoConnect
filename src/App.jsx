@@ -18,7 +18,8 @@ const Icons = {
     Check: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
     School: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>,
     Mail: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
-    Github: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+    Github: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>,
+    X: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 };
 
 function App() {
@@ -26,7 +27,10 @@ function App() {
     const [activeCategories, setActiveCategories] = useState([]); // Array para multi-selección
     const [activeSemester, setActiveSemester] = useState('Todos');
     const [activeStatus, setActiveStatus] = useState('Todos');
-    const [activeValidationFilter, setActiveValidationFilter] = useState('Todos'); // 'Todos' | 'Validados' | 'Pendientes'
+    const [activeValidationFilter, setActiveValidationFilter] = useState('Todos');
+    const [activeProjectTab, setActiveProjectTab] = useState('all'); // 'all' or 'favorites'
+    const [activeOppTab, setActiveOppTab] = useState('all'); // 'all' or 'favorites'
+    // 'Todos' | 'Validados' | 'Pendientes'
 
     const [user, setUser] = useState(null);
     const [profile, setProfile] = useState(null);
@@ -38,6 +42,9 @@ function App() {
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [editingProject, setEditingProject] = useState(null); // Proyecto que estamos editando
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [isNotifOpen, setIsNotifOpen] = useState(false);
 
     // Gestión de Vistas
     const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'profile' | 'details' | 'opportunities'
@@ -59,7 +66,7 @@ function App() {
                     const email = currentUser.email;
                     const domain = email.substring(email.lastIndexOf("@"));
 
-                    // 1. Verificar roles en paralelo para mayor velocidad
+                    // 1. Verificar roles en paralelo
                     const [teacherSnap, companySnap] = await Promise.all([
                         getDoc(doc(db, "whitelist_teachers", email)),
                         getDoc(doc(db, "whitelist_companies", domain))
@@ -68,17 +75,68 @@ function App() {
                     let assignedRole = 'student';
                     if (teacherSnap.exists()) {
                         assignedRole = 'teacher';
-                    } else if (companySnap.exists()) {
+                    } else if (companySnap.exists() && domain !== '@amigo.edu.co') {
+                        // Dominios externos whitelisteados son empresas
                         assignedRole = 'company';
+                    } else if (companySnap.exists() && domain === '@amigo.edu.co') {
+                        // Caso especial: La universidad puede ser empresa en el whitelist, 
+                        // pero solo si el usuario no es un docente (ya checado arriba) 
+                        // y si queremos que sea empresa por defecto. 
+                        // Por seguridad, para el dominio institucional, si no es profe, es estudiante.
+                        assignedRole = 'student';
                     }
 
                     setUserRole(assignedRole);
 
-                    // 2. Obtener perfil
-                    const docSnap = await getDoc(doc(db, "users", currentUser.uid));
+                    // 2. Obtener y sincronizar perfil
+                    const userRef = doc(db, "users", currentUser.uid);
+                    const docSnap = await getDoc(userRef);
+
                     if (docSnap.exists()) {
-                        setProfile(docSnap.data());
+                        const userData = docSnap.data();
+
+                        // Sincronizar nombre si es empresa/profe y cambio en whitelist
+                        if (assignedRole === 'company' && companySnap.exists()) {
+                            const companyName = companySnap.data().name;
+                            if (userData.name !== companyName) {
+                                await updateDoc(userRef, { name: companyName });
+                                userData.name = companyName;
+                            }
+                        } else if (assignedRole === 'teacher' && teacherSnap.exists()) {
+                            const teacherName = teacherSnap.data().fullName;
+                            if (userData.name !== teacherName) {
+                                await updateDoc(userRef, { name: teacherName });
+                                userData.name = teacherName;
+                            }
+                        }
+
+                        // Sincronizar rol si cambio en whitelist
+                        if (userData.role !== assignedRole && assignedRole !== 'student') {
+                            await updateDoc(userRef, { role: assignedRole });
+                            userData.role = assignedRole;
+                        }
+
+                        setProfile(userData);
+                    } else if (assignedRole !== 'student') {
+                        // Caso especial: Primer login de Profe o Empresa, crear perfil base automático
+                        const whitelistData = assignedRole === 'teacher' ? teacherSnap.data() : companySnap.data();
+                        const initialProfile = {
+                            uid: currentUser.uid,
+                            name: assignedRole === 'teacher' ? whitelistData.fullName : whitelistData.name,
+                            mail: email,
+                            role: assignedRole,
+                            program: assignedRole === 'teacher' ? whitelistData.faculty : "Entidad Externa",
+                            avatarUrl: currentUser.photoURL || "",
+                            createdAt: new Date().toISOString(),
+                            dni: "S/N",
+                            favorites: [],
+                            description: assignedRole === 'company' ? "Empresa vinculada a AmigoConnect" : "",
+                            github: ""
+                        };
+                        await setDoc(userRef, initialProfile);
+                        setProfile(initialProfile);
                     } else {
+                        // Es estudiante sin perfil -> Mostrará Onboarding
                         setProfile(null);
                     }
                 } else {
@@ -124,7 +182,26 @@ function App() {
         });
         return () => unsubscribeProjects();
     }, []);
-    // 3. Escuchar Oportunidades en tiempo real
+
+    // 3. Notificaciones en Tiempo Real
+    useEffect(() => {
+        if (!user) return;
+        // El snippet anterior tiene un error de anidamiento, lo corregiré luego.
+        // Mejor usar el patrón estándar:
+        const q = query(collection(db, "notifications"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const list = snapshot.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(n => n.to === user.uid)
+                .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+            setNotifications(list);
+            setUnreadCount(list.filter(n => !n.read).length);
+        });
+        return () => unsubscribe();
+    }, [user]);
+
+    // 4. Funciones de ayuda
+    // 5. Escuchar Oportunidades en tiempo real
     useEffect(() => {
         const qOpps = query(collection(db, "opportunities"));
         const unsubscribeOpps = onSnapshot(qOpps, (snapshot) => {
@@ -168,7 +245,7 @@ function App() {
     const handleOnboardingSubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
-        const selectedRole = formData.get('role') || userRole; // Prioridad al del form
+        const selectedRole = formData.get('role');
 
         const newProfile = {
             uid: user.uid,
@@ -177,12 +254,25 @@ function App() {
             mail: user.email,
             role: selectedRole,
             dni: formData.get('dni'),
-            program: formData.get('program'),
-            semester: formData.get('semester') || "N/A",
-            github: formData.get('github'),
             avatarUrl: user.photoURL || "",
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            favorites: []
         };
+
+        // Campos según rol
+        if (selectedRole === 'company') {
+            newProfile.program = "Entidad Externa";
+            newProfile.semester = "N/A";
+            newProfile.github = formData.get('github') || "";
+        } else if (selectedRole === 'teacher') {
+            newProfile.program = formData.get('program'); // Facultad
+            newProfile.semester = "N/A";
+            newProfile.github = formData.get('github') || "";
+        } else {
+            newProfile.program = formData.get('program');
+            newProfile.semester = formData.get('semester');
+            newProfile.github = formData.get('github') || "";
+        }
 
         try {
             await setDoc(doc(db, "users", user.uid), newProfile);
@@ -196,22 +286,32 @@ function App() {
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
-        const updatedProfile = {
-            ...profile,
-            name: formData.get('name'),
-            program: formData.get('program'),
-            semester: Number(formData.get('semester')),
-            github: formData.get('github')
-        };
+        const name = formData.get('name');
+        const program = formData.get('program');
+        const semester = formData.get('semester');
+        const github = formData.get('github');
+        const academicAverage = formData.get('academicAverage');
+        const technicalSkills = formData.get('technicalSkills')?.split(',').map(s => s.trim()) || [];
+        const softSkills = formData.get('softSkills')?.split(',').map(s => s.trim()) || [];
 
         try {
-            await updateDoc(doc(db, "users", user.uid), updatedProfile);
+            const updatedProfile = {
+                ...profile,
+                name,
+                program,
+                semester,
+                github,
+                academicAverage,
+                technicalSkills,
+                softSkills
+            };
+            await setDoc(doc(db, "users", user.uid), updatedProfile);
             setProfile(updatedProfile);
             setIsEditingProfile(false);
-            alert("Perfil actualizado correctamente");
+            alert("Perfil actualizado!");
         } catch (error) {
             console.error("Error al actualizar perfil:", error);
-            alert("No se pudo actualizar el perfil");
+            alert("Error al guardar cambios");
         }
     };
 
@@ -247,6 +347,11 @@ function App() {
                 techStack: formData.get('techStack').split(',').map(item => item.trim()),
                 demoUrl: formData.get('demoUrl'),
                 imageUrl: imageUrl,
+                maturityLevel: formData.get('maturityLevel'), // Prototipo, Beta, Estable, Producción
+                impactPotential: formData.get('impactPotential'),
+                sector: formData.get('sector'),
+                tutorId: formData.get('tutorId') || "", // ID del docente asignado
+                approvalStatus: 'pending', // Todos los proyectos nuevos nacen como pendientes
                 authorId: user.uid,
                 updatedAt: serverTimestamp()
             };
@@ -257,8 +362,20 @@ function App() {
             } else {
                 projectData.createdAt = serverTimestamp();
                 projectData.isValidated = false;
-                await addDoc(collection(db, "projects"), projectData);
-                alert("¡Proyecto compartido con éxito!");
+                projectData.approvalStatus = 'pending';
+                const newDoc = await addDoc(collection(db, "projects"), projectData);
+
+                // Enviar notificación al tutor si se asignó uno
+                if (projectData.tutorId) {
+                    await sendNotification(
+                        projectData.tutorId,
+                        `Nuevo proyecto pendiente de revisión: ${projectData.title}`,
+                        'project_approval',
+                        newDoc.id
+                    );
+                }
+
+                alert("¡Proyecto enviado para revisión institucional!");
             }
 
             setIsUploadModalOpen(false);
@@ -271,18 +388,84 @@ function App() {
         }
     };
 
-    const handleToggleValidation = async (project) => {
+    // 5. Sistema de Notificaciones
+    const sendNotification = async (toUid, message, type, targetId) => {
+        try {
+            await addDoc(collection(db, "notifications"), {
+                to: toUid,
+                from: user.uid,
+                fromName: profile?.name || user.displayName,
+                message,
+                type,
+                targetId,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+        } catch (error) {
+            console.error("Error al enviar notificación:", error);
+        }
+    };
+
+    const handleToggleFavorite = async (itemId) => {
+        if (!user) return;
+        const currentFavorites = profile?.favorites || [];
+        const isFavorite = currentFavorites.includes(itemId);
+
+        try {
+            const newFavorites = isFavorite
+                ? currentFavorites.filter(id => id !== itemId)
+                : [...currentFavorites, itemId];
+
+            await updateDoc(doc(db, "users", user.uid), { favorites: newFavorites });
+            setProfile({ ...profile, favorites: newFavorites });
+        } catch (error) {
+            console.error("Error al actualizar favoritos:", error);
+        }
+    };
+
+    const handleApproveProject = async (project) => {
         if (userRole !== 'teacher') return;
+        const isCurrentlyApproved = project.approvalStatus === 'approved';
         try {
             await updateDoc(doc(db, "projects", project.id), {
-                isValidated: !project.isValidated,
-                validatedBy: project.isValidated ? null : user.uid,
-                validatedAt: project.isValidated ? null : serverTimestamp()
+                approvalStatus: isCurrentlyApproved ? 'pending' : 'approved',
+                isValidated: !isCurrentlyApproved,
+                validatedBy: isCurrentlyApproved ? null : user.uid,
+                validatedAt: isCurrentlyApproved ? null : serverTimestamp()
             });
-            alert(project.isValidated ? "Validación removida" : "Proyecto validado correctamente");
+
+            if (!isCurrentlyApproved) {
+                await sendNotification(
+                    project.authorId,
+                    `¡Tu proyecto "${project.title}" ha sido aprobado!`,
+                    'approval_result',
+                    project.id
+                );
+            }
+            alert(isCurrentlyApproved ? "Proyecto desaprobado (ahora pendiente)" : "Proyecto aprobado y publicado");
         } catch (error) {
-            console.error("Error al cambiar validación:", error);
-            alert("No se pudo procesar la solicitud");
+            console.error("Error al procesar aprobación:", error);
+        }
+    };
+
+    const handleRejectProject = async (project) => {
+        if (userRole !== 'teacher') return;
+        const reason = prompt("Indica el motivo del rechazo para el estudiante:");
+        if (!reason) return;
+
+        try {
+            await updateDoc(doc(db, "projects", project.id), {
+                approvalStatus: 'rejected'
+            });
+            await sendNotification(
+                project.authorId,
+                `Tu proyecto "${project.title}" requiere ajustes: ${reason}`,
+                'approval_result',
+                project.id
+            );
+            alert("Notificación de rechazo enviada");
+        } catch (error) {
+            console.error("Error al rechazar:", error);
         }
     };
 
@@ -299,10 +482,13 @@ function App() {
                 type: formData.get('type'),
                 salary: formData.get('salary'),
                 location: formData.get('location'),
+                contact: formData.get('contact'),
+                sector: profile?.program || "General", // Usamos el sector/programa
+                approvalStatus: 'pending',
                 createdAt: serverTimestamp()
             };
             await addDoc(collection(db, "opportunities"), oppData);
-            alert("¡Oportunidad publicada!");
+            alert("¡Oportunidad enviada para validación institucional!");
             setIsOppModalOpen(false);
         } catch (error) {
             console.error("Error al publicar vacante:", error);
@@ -365,9 +551,10 @@ function App() {
                     <form className="onboarding-form" onSubmit={handleOnboardingSubmit}>
                         <div className="form-group">
                             <label>Tipo de Usuario</label>
-                            <select name="role" required>
+                            <select name="role" required onChange={(e) => setUserRole(e.target.value)}>
                                 <option value="student">Estudiante</option>
                                 <option value="graduate">Egresado</option>
+                                <option value="teacher">Docente / Investigador</option>
                                 <option value="company">Empresa / Reclutador</option>
                             </select>
                         </div>
@@ -375,24 +562,35 @@ function App() {
                             <label>DNI / Documento</label>
                             <input type="text" name="dni" placeholder="Ej: 123456789" required />
                         </div>
-                        <div className="form-group">
-                            <label>Programa Académico</label>
-                            <select name="program" required>
-                                <option value="">Selecciona tu carrera</option>
-                                <option value="Tecnología en Desarrollo de Software">Tecnología en Desarrollo de Software</option>
-                                <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
-                            </select>
-                        </div>
+                        {(userRole === 'student' || userRole === 'graduate') && (
+                            <div className="form-group">
+                                <label>Programa Académico</label>
+                                <select name="program" required>
+                                    <option value="">Selecciona tu carrera</option>
+                                    <option value="Tecnología en Desarrollo de Software">Tecnología en Desarrollo de Software</option>
+                                    <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
+                                </select>
+                            </div>
+                        )}
+                        {userRole === 'teacher' && (
+                            <div className="form-group">
+                                <label>Facultad / Área de Especialidad</label>
+                                <input type="text" name="program" placeholder="Ej: Facultad de Ingeniería" required />
+                            </div>
+                        )}
                         <div className="form-row">
-                            {userRole === 'student' && (
+                            {(userRole === 'student' || userRole === 'graduate') && (
                                 <div className="form-group">
                                     <label>Semestre Actual</label>
                                     <input type="number" name="semester" min="1" max="10" placeholder="1-10" required />
                                 </div>
                             )}
                             <div className="form-group">
-                                <label>GitHub (Opcional)</label>
-                                <input type="url" name="github" placeholder="https://github.com/usuario" />
+                                <label>
+                                    {userRole === 'company' ? 'Sitio Web / LinkedIn' :
+                                        userRole === 'teacher' ? 'Perfil Investigador / LinkedIn' : 'GitHub (Opcional)'}
+                                </label>
+                                <input type="text" name="github" placeholder="https://..." />
                             </div>
                         </div>
                         <button type="submit" className="submit-btn">Finalizar Registro</button>
@@ -421,7 +619,47 @@ function App() {
                 </div>
 
                 <div className="header-actions">
-                    <button className="icon-button" title="Notificaciones"><Icons.Bell /></button>
+                    <div className="notification-wrapper">
+                        <button
+                            className={`icon-button ${unreadCount > 0 ? 'has-notifications' : ''}`}
+                            onClick={() => setIsNotifOpen(!isNotifOpen)}
+                            title="Notificaciones"
+                        >
+                            <Icons.Bell />
+                            {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+                        </button>
+
+                        {isNotifOpen && (
+                            <div className="notification-dropdown">
+                                <div className="notif-header">
+                                    <h4>Notificaciones</h4>
+                                </div>
+                                <div className="notif-list">
+                                    {notifications.length === 0 ? (
+                                        <p className="notif-empty">No hay notificaciones</p>
+                                    ) : (
+                                        notifications.map(n => (
+                                            <div key={n.id} className={`notif-item ${n.read ? '' : 'unread'}`} onClick={async () => {
+                                                await updateDoc(doc(db, "notifications", n.id), { read: true });
+                                                if (n.targetId) {
+                                                    setSelectedProjectId(n.targetId);
+                                                    setActiveView('details');
+                                                    setIsNotifOpen(false);
+                                                }
+                                            }}>
+                                                <div className="notif-content">
+                                                    <p className="notif-message">{n.message}</p>
+                                                    <small className="notif-time">Hace poco</small>
+                                                </div>
+                                                {!n.read && <span className="unread-dot"></span>}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="user-profile-info" onClick={handleProfileClick} title="Mi Perfil">
                         <div className="user-profile-img">
                             {profile?.avatarUrl ? (
@@ -530,6 +768,16 @@ function App() {
                     <main className="main-content">
                         <div className="section-header">
                             <h2 className="section-title">Explorar Proyectos</h2>
+                            <div className="view-tabs">
+                                <button
+                                    className={`view-tab ${activeProjectTab === 'all' ? 'active' : ''}`}
+                                    onClick={() => setActiveProjectTab('all')}
+                                >Todos</button>
+                                <button
+                                    className={`view-tab ${activeProjectTab === 'favorites' ? 'active' : ''}`}
+                                    onClick={() => setActiveProjectTab('favorites')}
+                                >Mis Favoritos ⭐</button>
+                            </div>
                         </div>
 
                         {(() => {
@@ -541,13 +789,25 @@ function App() {
                                 const matchValidation = activeValidationFilter === 'Todos' ||
                                     (activeValidationFilter === 'Validados' && project.isValidated) ||
                                     (activeValidationFilter === 'Pendientes' && !project.isValidated);
-                                return matchMain && matchSemester && matchStatus && matchCategory && matchValidation;
+
+                                const isFavorite = profile?.favorites?.includes(project.id);
+                                const matchFavorites = activeProjectTab === 'all' || (activeProjectTab === 'favorites' && isFavorite);
+
+                                return matchMain && matchSemester && matchStatus && matchCategory && matchValidation && matchFavorites;
                             });
 
-                            if (filteredProjects.length === 0) {
+                            // Visibilidad de Aprobación
+                            const visibleProjects = filteredProjects.filter(p => {
+                                if (userRole === 'teacher') return true; // Profesores ven todo
+                                if (user?.uid === p.authorId) return true; // Autor ve lo suyo
+                                if (p.approvalStatus === 'approved') return true; // Solo aprobados para el resto
+                                return false;
+                            });
+
+                            if (visibleProjects.length === 0) {
                                 return (
                                     <div className="empty-state">
-                                        <p>No se encontraron proyectos con los filtros seleccionados.</p>
+                                        <p>No se encontraron proyectos aprobados o disponibles.</p>
                                         <button className="tag-clear" onClick={() => {
                                             setActiveMainFilter('Todos');
                                             setActiveSemester('Todos');
@@ -561,11 +821,23 @@ function App() {
 
                             return (
                                 <div className="project-grid">
-                                    {filteredProjects.map(project => {
+                                    {visibleProjects.map(project => {
                                         const projectAuthor = users[project.authorId] || {};
                                         const isAuthor = user?.uid === project.authorId;
+
                                         return (
-                                            <article key={project.id} className="project-card" onClick={() => handleProjectClick(project.id)} style={{ cursor: 'pointer' }}>
+                                            <article key={project.id} className="project-card" onClick={() => handleProjectClick(project.id)} style={{
+                                                cursor: 'pointer',
+                                                borderTop: project.approvalStatus === 'pending' ? '4px solid #ff9800' : 'none'
+                                            }}>
+                                                <button
+                                                    className={`btn-favorite ${profile?.favorites?.includes(project.id) ? 'active' : ''}`}
+                                                    onClick={(e) => { e.stopPropagation(); handleToggleFavorite(project.id); }}
+                                                    title="Añadir a favoritos"
+                                                >
+                                                    {profile?.favorites?.includes(project.id) ? '⭐' : '☆'}
+                                                </button>
+
                                                 <div
                                                     className="card-banner"
                                                     style={{
@@ -576,32 +848,69 @@ function App() {
                                                     }}>
                                                     <span className="tag-semester">Semestre {project.semester || 'N/A'}</span>
                                                     {project.isValidated && <span className="badge-validated">Validado</span>}
-                                                    {isAuthor && (
+                                                    {project.approvalStatus === 'pending' && <span className="badge-pending">Pendiente</span>}
+                                                    {project.approvalStatus === 'rejected' && <span className="badge-rejected">Rechazado</span>}
+                                                </div>
+                                                {/* Validación (Profe) */}
+                                                {userRole === 'teacher' && (
+                                                    <div className="card-actions-validation">
                                                         <button
-                                                            className="edit-card-btn"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setEditingProject(project);
-                                                                setIsUploadModalOpen(true);
-                                                            }}
-                                                            title="Editar Proyecto"
+                                                            className={`btn-approve-toggle ${project.approvalStatus === 'approved' ? 'approved' : ''}`}
+                                                            onClick={(e) => { e.stopPropagation(); handleApproveProject(project); }}
+                                                            title={project.approvalStatus === 'approved' ? "Desaprobar" : "Aprobar"}
                                                         >
-                                                            <Icons.Edit />
+                                                            {project.approvalStatus === 'approved' ? <Icons.X /> : <Icons.Check />}
+                                                            {project.approvalStatus === 'approved' ? 'Desaprobar' : 'Aprobar'}
                                                         </button>
-                                                    )}
-                                                    {userRole === 'teacher' && (
+                                                    </div>
+                                                )}
+
+                                                {/* Edición (Autor/Profe) */}
+                                                {(isAuthor || userRole === 'teacher') && (
+                                                    <button
+                                                        className="edit-card-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setEditingProject(project);
+                                                            setIsUploadModalOpen(true);
+                                                        }}
+                                                        title="Editar Proyecto"
+                                                    >
+                                                        <Icons.Edit />
+                                                    </button>
+                                                )}
+
+                                                {/* Acciones de Aprobación (Solo Docente + Pendiente) */}
+                                                {userRole === 'teacher' && project.approvalStatus === 'pending' && (
+                                                    <div className="approval-actions">
                                                         <button
-                                                            className={`validate-card-btn ${project.isValidated ? 'unvalidate' : ''}`}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleToggleValidation(project);
-                                                            }}
-                                                            title={project.isValidated ? "Quitar Validación" : "Validar Proyecto"}
+                                                            className="approve-btn"
+                                                            onClick={(e) => { e.stopPropagation(); handleApproveProject(project); }}
+                                                            title="Aprobar Proyecto"
                                                         >
                                                             <Icons.Check />
                                                         </button>
-                                                    )}
-                                                </div>
+                                                        <button
+                                                            className="reject-btn"
+                                                            onClick={(e) => { e.stopPropagation(); handleRejectProject(project); }}
+                                                            title="Rechazar"
+                                                        >
+                                                            <Icons.X />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                {userRole === 'teacher' && (
+                                                    <button
+                                                        className={`validate-card-btn ${project.isValidated ? 'unvalidate' : ''}`}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleToggleValidation(project);
+                                                        }}
+                                                        title={project.isValidated ? "Quitar Validación" : "Validar Proyecto"}
+                                                    >
+                                                        <Icons.Check />
+                                                    </button>
+                                                )}
                                                 <div className="card-body">
                                                     <h3 className="card-title">{project.title}</h3>
                                                     <p className="card-description">{project.problemSolved || project.description}</p>
@@ -644,45 +953,116 @@ function App() {
             {activeView === 'opportunities' && (
                 <div className="opportunities-view">
                     <div className="section-header">
-                        <h2 className="section-title">Oportunidades Laborales y Prácticas</h2>
-                        {userRole === 'company' && (
-                            <button className="primary-action-btn" onClick={() => setIsOppModalOpen(true)}>
-                                <Icons.Plus /> Publicar Vacante
-                            </button>
-                        )}
+                        <h2 className="section-title">Oportunidades Laborales</h2>
+                        <div className="header-actions-row">
+                            <div className="view-tabs">
+                                <button
+                                    className={`view-tab ${activeOppTab === 'all' ? 'active' : ''}`}
+                                    onClick={() => setActiveOppTab('all')}
+                                >Todas</button>
+                                <button
+                                    className={`view-tab ${activeOppTab === 'favorites' ? 'active' : ''}`}
+                                    onClick={() => setActiveOppTab('favorites')}
+                                >Mis Favoritas ⭐</button>
+                            </div>
+                            {userRole === 'company' && (
+                                <button className="primary-action-btn" onClick={() => setIsOppModalOpen(true)}>
+                                    <Icons.Plus /> Publicar Vacante
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="opps-grid">
-                        {opportunities.length === 0 ? (
-                            <div className="empty-state">
-                                <p>No hay vacantes publicadas en este momento.</p>
-                            </div>
-                        ) : (
-                            opportunities.map(opp => (
-                                <article key={opp.id} className="opp-card">
-                                    <div className="opp-header">
-                                        <div className="company-logo-small">
-                                            {opp.companyLogo ? <img src={opp.companyLogo} alt={opp.company} /> : opp.company?.charAt(0)}
-                                        </div>
-                                        <div>
-                                            <h3 className="opp-title">{opp.title}</h3>
-                                            <span className="opp-company">{opp.company}</span>
-                                        </div>
+                        {(() => {
+                            const isFavorite = (id) => profile?.favorites?.includes(id);
+
+                            const visibleOpps = opportunities.filter(o => {
+                                const matchFavorites = activeOppTab === 'all' || (activeOppTab === 'favorites' && isFavorite(o.id));
+                                if (!matchFavorites) return false;
+
+                                if (userRole === 'teacher') return true;
+                                if (user?.uid === o.companyId) return true;
+                                if (o.approvalStatus === 'approved') return true;
+                                return false;
+                            });
+
+                            if (visibleOpps.length === 0) {
+                                return (
+                                    <div className="empty-state">
+                                        <p>No hay vacantes aprobadas en este momento.</p>
                                     </div>
-                                    <div className="opp-body">
-                                        <p>{opp.description}</p>
-                                        <div className="opp-tags">
-                                            <span className="opp-tag">{opp.modality}</span>
-                                            <span className="opp-tag">{opp.type}</span>
-                                            <span className="opp-tag">{opp.salary}</span>
+                                );
+                            }
+
+                            return visibleOpps.map(opp => {
+                                return (
+                                    <article key={opp.id} className={`opp-card ${opp.approvalStatus === 'pending' ? 'pending' : ''}`}>
+                                        <button
+                                            className={`btn-favorite-opp ${profile?.favorites?.includes(opp.id) ? 'active' : ''}`}
+                                            onClick={(e) => { e.stopPropagation(); handleToggleFavorite(opp.id); }}
+                                            title="Añadir a favoritos"
+                                        >
+                                            {profile?.favorites?.includes(opp.id) ? '⭐' : '☆'}
+                                        </button>
+                                        <div className="opp-header">
+                                            <div className="company-logo-small">
+                                                {opp.companyLogo ? <img src={opp.companyLogo} alt={opp.company} /> : opp.company?.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <h3 className="opp-title">{opp.title}</h3>
+                                                <span className="opp-company">{opp.company}</span>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="opp-footer">
-                                        <button className="secondary-action-btn" style={{ width: '100%' }}>Postularme Ahora</button>
-                                    </div>
-                                </article>
-                            ))
-                        )}
+                                        <div className="opp-body">
+                                            <p>{opp.description}</p>
+                                            <div className="opp-tags">
+                                                <span className="opp-tag">{opp.modality}</span>
+                                                <span className="opp-tag">{opp.type}</span>
+                                                <span className="opp-tag">{opp.salary}</span>
+                                            </div>
+                                        </div>
+                                        <div className="opp-footer">
+                                            <div className="opp-contact-info">
+                                                <Icons.Mail /> <span>{opp.contact}</span>
+                                            </div>
+                                            {userRole === 'student' && (
+                                                <button className="secondary-action-btn" onClick={() => window.open(opp.contact.startsWith('http') ? opp.contact : `mailto:${opp.contact}`)}>
+                                                    Postularme Ahora
+                                                </button>
+                                            )}
+
+                                            {/* Validación de Vacantes (Docente/Coordinador) */}
+                                            {userRole === 'teacher' && (
+                                                <div className="opp-approval-bar">
+                                                    <button
+                                                        className={`btn-approve-toggle ${opp.approvalStatus === 'approved' ? 'approved' : ''}`}
+                                                        onClick={async () => {
+                                                            const isCurrentlyApproved = opp.approvalStatus === 'approved';
+                                                            await updateDoc(doc(db, "opportunities", opp.id), {
+                                                                approvalStatus: isCurrentlyApproved ? 'pending' : 'approved'
+                                                            });
+                                                            alert(isCurrentlyApproved ? "Vacante desaprobada" : "Vacante aprobada");
+                                                        }}
+                                                    >
+                                                        {opp.approvalStatus === 'approved' ? 'Desaprobar Publicación' : 'Aprobar Publicación'}
+                                                    </button>
+                                                    {opp.approvalStatus === 'pending' && (
+                                                        <button className="reject-btn" onClick={async () => {
+                                                            const reason = prompt("Motivo del rechazo:");
+                                                            if (reason) {
+                                                                await updateDoc(doc(db, "opportunities", opp.id), { approvalStatus: 'rejected' });
+                                                                alert("Vacante rechazada");
+                                                            }
+                                                        }}>Rechazar</button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </article>
+                                );
+                            })
+                        })()}
                     </div>
                 </div>
             )}
@@ -703,14 +1083,19 @@ function App() {
                             <div className="profile-details-text">
                                 {isEditingProfile ? (
                                     <form onSubmit={handleUpdateProfile} className="edit-profile-form">
-                                        <input type="text" name="name" defaultValue={profile?.name || user?.displayName} placeholder="Nombre" required />
+                                        <div className="form-group-inline">
+                                            <input type="text" name="name" defaultValue={profile?.name || user?.displayName} placeholder="Nombre" required />
+                                            <input type="number" step="0.1" name="academicAverage" defaultValue={profile?.academicAverage} placeholder="Promedio Académico" />
+                                        </div>
                                         <div className="form-row">
                                             <input type="text" name="program" defaultValue={profile?.program} placeholder="Carrera" required />
                                             <input type="number" name="semester" defaultValue={profile?.semester} placeholder="Semestre" required />
                                         </div>
-                                        <input type="text" name="github" defaultValue={profile?.github} placeholder="Usuario Github" />
+                                        <input type="text" name="technicalSkills" defaultValue={profile?.technicalSkills?.join(', ')} placeholder="Habilidades Técnicas (separadas por coma)" />
+                                        <input type="text" name="softSkills" defaultValue={profile?.softSkills?.join(', ')} placeholder="Habilidades Blandas (separadas por coma)" />
+                                        <input type="text" name="github" defaultValue={profile?.github} placeholder="Link de Github" />
                                         <div className="form-actions-inline">
-                                            <button type="submit" className="primary-action-btn"><Icons.Check /> Guardar</button>
+                                            <button type="submit" className="primary-action-btn"><Icons.Check /> Guardar Perfil Profesional</button>
                                             <button type="button" className="secondary-action-btn" onClick={() => setIsEditingProfile(false)}>Cancelar</button>
                                         </div>
                                     </form>
@@ -719,13 +1104,21 @@ function App() {
                                         <h1>{profile?.name || user?.displayName}</h1>
                                         <div className="profile-subtext">
                                             <span><Icons.School /> {profile?.program} • Semestre {profile?.semester}</span>
+                                            {profile?.academicAverage && <span className="badge-gpa">Promedio: {profile.academicAverage}</span>}
                                             <span><Icons.Mail /> {user?.email}</span>
                                             {profile?.github && (
-                                                <a href={profile.github} target="_blank" rel="noopener noreferrer" className="profile-link">
-                                                    <Icons.Github /> github.com/{profile.github.split('/').pop()}
+                                                <a href={profile.github.startsWith('http') ? profile.github : `https://github.com/${profile.github}`} target="_blank" rel="noopener noreferrer" className="profile-link">
+                                                    <Icons.Github /> Perfil Github
                                                 </a>
                                             )}
                                         </div>
+
+                                        {(profile?.technicalSkills?.length > 0 || profile?.softSkills?.length > 0) && (
+                                            <div className="profile-skills-summary">
+                                                {profile?.technicalSkills?.slice(0, 5).map(s => <span key={s} className="skill-chip">{s}</span>)}
+                                                {profile?.technicalSkills?.length > 5 && <span className="skill-chip more">+{profile.technicalSkills.length - 5}</span>}
+                                            </div>
+                                        )}
                                     </>
                                 )}
                             </div>
@@ -739,9 +1132,21 @@ function App() {
 
                     <div className="profile-sections-grid">
                         <section>
-                            <h3 className="profile-section-title">Mi Hoja de Vida</h3>
+                            <h3 className="profile-section-title">
+                                {profile?.role === 'teacher' ? 'Información Profesional' : 'Mi Hoja de Vida'}
+                            </h3>
                             <div className="resume-upload-section">
-                                {profile?.resumeUrl ? (
+                                {profile?.role === 'teacher' ? (
+                                    <div className="teacher-info-card">
+                                        <p><strong>Docente de la facultad:</strong> {profile?.program}</p>
+                                        <p><strong>Contacto:</strong> {profile?.mail}</p>
+                                        {profile?.github && (
+                                            <a href={profile.github} target="_blank" rel="noopener noreferrer" className="resume-link">
+                                                <Icons.External /> Perfil Profesional
+                                            </a>
+                                        )}
+                                    </div>
+                                ) : profile?.resumeUrl ? (
                                     <div>
                                         <p>✅ Hoja de vida cargada correctamente.</p>
                                         <a href={profile.resumeUrl} target="_blank" rel="noopener noreferrer" className="resume-link">
@@ -760,21 +1165,25 @@ function App() {
                         </section>
 
                         <section>
-                            <h3 className="profile-section-title">Mis Proyectos ({projects.filter(p => p.authorId === user.uid).length})</h3>
+                            <h3 className="profile-section-title">
+                                {profile?.role === 'teacher' ? 'Proyectos Validados por mí' : `Mis Proyectos (${projects.filter(p => p.authorId === user.uid).length})`}
+                            </h3>
                             <div className="project-grid">
-                                {projects.filter(p => p.authorId === user.uid).map(project => (
-                                    <article key={project.id} className="project-card" onClick={() => handleProjectClick(project.id)} style={{ cursor: 'pointer' }}>
-                                        <div className="card-banner" style={{ backgroundImage: `url(${project.imageUrl})`, backgroundSize: 'cover' }}>
-                                            <span className="tag-semester">Semestre {project.semester}</span>
-                                        </div>
-                                        <div className="card-body">
-                                            <h3 className="card-title">{project.title}</h3>
-                                            <small className="tech-stack">{Array.isArray(project.techStack) ? project.techStack.slice(0, 2).join(', ') : project.techStack}</small>
-                                        </div>
-                                    </article>
-                                ))}
-                                {projects.filter(p => p.authorId === user.uid).length === 0 && (
-                                    <p>Aún no has publicado proyectos.</p>
+                                {projects
+                                    .filter(p => profile?.role === 'teacher' ? p.validatedBy === user.uid : p.authorId === user.uid)
+                                    .map(project => (
+                                        <article key={project.id} className="project-card" onClick={() => handleProjectClick(project.id)} style={{ cursor: 'pointer' }}>
+                                            <div className="card-banner" style={{ backgroundImage: `url(${project.imageUrl})`, backgroundSize: 'cover' }}>
+                                                <span className="tag-semester">Semestre {project.semester}</span>
+                                            </div>
+                                            <div className="card-body">
+                                                <h3 className="card-title">{project.title}</h3>
+                                                <small className="tech-stack">{Array.isArray(project.techStack) ? project.techStack.slice(0, 2).join(', ') : project.techStack}</small>
+                                            </div>
+                                        </article>
+                                    ))}
+                                {projects.filter(p => profile?.role === 'teacher' ? p.validatedBy === user.uid : p.authorId === user.uid).length === 0 && (
+                                    <p>{profile?.role === 'teacher' ? 'Aún no has validado proyectos.' : 'Aún no has publicado proyectos.'}</p>
                                 )}
                             </div>
                         </section>
@@ -802,6 +1211,8 @@ function App() {
                                             <div className="details-meta">
                                                 <span className="details-tag">Semestre {project.semester}</span>
                                                 <span className="details-tag">{project.category}</span>
+                                                <span className="details-tag sector">{project.sector}</span>
+                                                <span className={`status-badge ${project.approvalStatus}`}>{project.approvalStatus?.toUpperCase()}</span>
                                             </div>
                                             <h1>{project.title}</h1>
 
@@ -816,6 +1227,13 @@ function App() {
                                                 <h3>Sobre el proyecto</h3>
                                                 <p>{project.problemSolved}</p>
                                             </div>
+
+                                            {project.impactPotential && (
+                                                <div className="details-description highlight">
+                                                    <h3>Potencial de Impacto</h3>
+                                                    <p>{project.impactPotential}</p>
+                                                </div>
+                                            )}
 
                                             {project.techArchitecture && (
                                                 <div className="details-description">
@@ -845,8 +1263,8 @@ function App() {
                                                 <span className="detail-value">{project.status}</span>
                                             </div>
                                             <div className="detail-item">
-                                                <span className="detail-label">Público</span>
-                                                <span className="detail-value">{project.targetAudience}</span>
+                                                <span className="detail-label">Nivel Madurez (TRL)</span>
+                                                <span className="detail-value">{project.maturityLevel || 'Inicial'}</span>
                                             </div>
                                             <div className="detail-item">
                                                 <span className="detail-label">Licencia</span>
@@ -899,8 +1317,41 @@ function App() {
                         </div>
                         <form className="upload-form" onSubmit={handleProjectSubmit}>
                             <div className="form-group">
-                                <label>Título del Proyecto</label>
-                                <input type="text" name="title" defaultValue={editingProject?.title} placeholder="Ej: Sistema de Riego IoT" required />
+                                <label>Título del Proyecto/Producto</label>
+                                <input type="text" name="title" defaultValue={editingProject?.title} placeholder="Ej: AmigoConnect" required />
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Sector Económico</label>
+                                    <select name="sector" defaultValue={editingProject?.sector || ""} required>
+                                        <option value="">Selecciona un sector</option>
+                                        <option value="Tecnología">Tecnología / Software</option>
+                                        <option value="Salud">Salud / Bienestar</option>
+                                        <option value="Educación">Educación / EdTech</option>
+                                        <option value="Finanzas">Finanzas / FinTech</option>
+                                        <option value="Social">Impacto Social</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Nivel de Madurez (TRL)</label>
+                                    <select name="maturityLevel" defaultValue={editingProject?.maturityLevel || "Prototipo"} required>
+                                        <option value="Prototipo">Prototipo Inicial</option>
+                                        <option value="Beta">Versión Beta / MVP</option>
+                                        <option value="Estable">Versión Estable</option>
+                                        <option value="Producción">En Producción / Mercado</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Descripción del Proyecto (Resumen Ejecutivo)</label>
+                                <textarea name="problemSolved" rows="3" defaultValue={editingProject?.problemSolved} placeholder="Describe el impacto y valor de tu producto..." required></textarea>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Potencial de Impacto Institucional/Social</label>
+                                <textarea name="impactPotential" rows="2" defaultValue={editingProject?.impactPotential} placeholder="¿Cómo cambia esto el entorno o la comunidad?" required></textarea>
                             </div>
 
                             <div className="form-group">
@@ -919,16 +1370,11 @@ function App() {
                                     </select>
                                 </div>
                                 <div className="form-group">
-                                    <label>Estado</label>
+                                    <label>Estado del Proyecto</label>
                                     <select name="status" defaultValue={editingProject?.status} required>
                                         {statuses.filter(s => s !== 'Todos').map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
                                 </div>
-                            </div>
-
-                            <div className="form-group">
-                                <label>Problema Solucionado</label>
-                                <textarea name="problemSolved" rows="2" defaultValue={editingProject?.problemSolved} placeholder="¿Qué problema resuelve este proyecto?" required></textarea>
                             </div>
 
                             <div className="form-row">
@@ -978,8 +1424,18 @@ function App() {
                                 <input type="file" name="image" accept="image/*" required={!editingProject} />
                             </div>
 
+                            <div className="form-group">
+                                <label>Docente Tutor / Supervisor (Asignado)</label>
+                                <select name="tutorId" defaultValue={editingProject?.tutorId || ""}>
+                                    <option value="">Selecciona un tutor para validación</option>
+                                    {Object.values(users).filter(u => u.role === 'teacher').map(t => (
+                                        <option key={t.uid} value={t.uid}>{t.name} - {t.program}</option>
+                                    ))}
+                                </select>
+                            </div>
+
                             <button type="submit" className="submit-btn" disabled={isUploading}>
-                                {isUploading ? "Guardando..." : (editingProject ? "Actualizar Proyecto" : "Publicar Proyecto")}
+                                {isUploading ? 'Procesando...' : (editingProject ? 'Actualizar y Enviar a Revisión' : 'Publicar y Enviar a Revisión')}
                             </button>
                         </form>
                     </div>
@@ -1021,13 +1477,18 @@ function App() {
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>Salario / Remuneración</label>
-                                    <input type="text" name="salary" placeholder="Ej: $2.500.000 o 'A convenir'" />
+                                    <label>Salario Sugerido</label>
+                                    <input type="text" name="salary" placeholder="Ej: 2.5M - 3.5M" required />
                                 </div>
                                 <div className="form-group">
                                     <label>Ubicación</label>
-                                    <input type="text" name="location" placeholder="Ciudad o 'Cualquiera'" />
+                                    <input type="text" name="location" placeholder="Ciudad o Remoto" required />
                                 </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Contacto para Aplicar (Email o Link)</label>
+                                <input type="text" name="contact" placeholder="Ej: reclutamiento@claro.com" required />
                             </div>
                             <button type="submit" className="submit-btn" style={{ marginTop: '20px' }}>Publicar Vacante</button>
                         </form>

@@ -10,11 +10,15 @@ const db = admin.firestore();
 const teachers = [
     { email: 'profesor.perez@amigo.edu.co', fullName: 'Juan Pérez', faculty: 'Ingeniería' },
     { email: 'marisela.rojas@amigo.edu.co', fullName: 'Marisela Rojas', faculty: 'Tecnología' },
+    { email: 'jawujj@gmail.com', fullName: 'DDDDD DDDD', faculty: 'Tecnología' },
+
 ];
 
 const companies = [
     { domain: '@claro.com', name: 'Claro Colombia' },
     { domain: '@bancolombia.com.co', name: 'Bancolombia' },
+    { domain: '@amigo.edu.co', name: 'Fundación Universitaria Luis Amigó' },
+
 ];
 
 async function seedWhitelist() {

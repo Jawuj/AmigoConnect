@@ -114,6 +114,7 @@
     text-decoration: none;
     margin-top: 10px;
 }
+
 .edit-profile-form {
     display: flex;
     flex-direction: column;
@@ -124,7 +125,7 @@
 
 .edit-profile-form input {
     padding: 10px;
-    border: 1px solid rgba(0,0,0,0.1);
+    border: 1px solid rgba(0, 0, 0, 0.1);
     border-radius: 8px;
     font-size: 1rem;
     width: 100%;
@@ -141,8 +142,72 @@
     margin-top: 10px;
 }
 
-.profile-subtext span, .profile-link {
+.profile-subtext span,
+.profile-link {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.badge-gpa {
+    background: #e3f2fd;
+    color: #0d47a1;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border: 1px solid #bbdefb;
+    display: inline-flex !important;
+    width: fit-content;
+    margin-bottom: 5px;
+}
+
+.profile-skills-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.skill-chip {
+    background: #f0f2f5;
+    color: #444;
+    padding: 6px 14px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.skill-chip:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.skill-chip.more {
+    background: #eee;
+    color: #888;
+}
+
+.form-group-inline {
+    display: flex;
+    gap: 15px;
+}
+
+.form-group-inline input {
+    flex: 1;
+}
+
+.edit-profile-form input,
+.edit-profile-form textarea {
+    padding: 12px 15px;
+    border: 1.5px solid #eee;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+}
+
+.edit-profile-form input:focus {
+    border-color: var(--primary-color);
+    outline: none;
 }
