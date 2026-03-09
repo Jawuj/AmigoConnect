@@ -2,7 +2,7 @@ import React from 'react';
 import { db } from "../../firebase";
 import { setDoc, doc } from "firebase/firestore";
 
-function Onboarding({ user, setProfile, userRole, setUserRole }) {
+function Onboarding({ user, setProfile, setIsNewUser, userRole, setUserRole }) {
     const handleOnboardingSubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
@@ -31,13 +31,14 @@ function Onboarding({ user, setProfile, userRole, setUserRole }) {
             newProfile.github = formData.get('github') || "";
         } else {
             newProfile.program = formData.get('program');
-            newProfile.semester = formData.get('semester');
+            newProfile.semester = Number(formData.get('semester')) || 1;
             newProfile.github = formData.get('github') || "";
         }
 
         try {
             await setDoc(doc(db, "users", user.uid), newProfile);
             setProfile(newProfile);
+            setIsNewUser(false); // Salir del flujo de onboarding
         } catch (error) {
             console.error("Error al guardar perfil:", error);
             alert("Error al guardar el perfil. Intenta de nuevo.");

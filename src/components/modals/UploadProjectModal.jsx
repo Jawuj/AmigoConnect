@@ -2,7 +2,7 @@ import React from 'react';
 
 export default function UploadProjectModal({
     editingProject, setEditingProject, setIsUploadModalOpen,
-    handleProjectSubmit, isUploading, projectCategories, statuses, users
+    handleProjectSubmit, handleDeleteProject, isUploading, projectCategories, statuses, users
 }) {
     return (
         <div className="modal-overlay">
@@ -133,6 +133,18 @@ export default function UploadProjectModal({
                     <button type="submit" className="submit-btn" disabled={isUploading}>
                         {isUploading ? 'Procesando...' : (editingProject ? 'Actualizar y Enviar a Revisión' : 'Publicar y Enviar a Revisión')}
                     </button>
+
+                    {editingProject && (
+                        <button
+                            type="button"
+                            className="submit-btn"
+                            style={{ marginTop: '8px', background: 'linear-gradient(135deg, #ef4444, #b91c1c)', opacity: isUploading ? 0.5 : 1 }}
+                            disabled={isUploading}
+                            onClick={() => handleDeleteProject(editingProject)}
+                        >
+                            🗑️ Eliminar Proyecto Permanentemente
+                        </button>
+                    )}
                 </form>
             </div>
         </div>

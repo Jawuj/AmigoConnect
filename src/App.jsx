@@ -24,11 +24,14 @@ function App() {
     const [activeStatus, setActiveStatus] = useState('Todos');
     const [activeValidationFilter, setActiveValidationFilter] = useState('Todos');
     const [activeProjectTab, setActiveProjectTab] = useState('all'); // 'all' or 'favorites'
+    const [searchQuery, setSearchQuery] = useState('');
 
     const [user, setUser] = useState(null);
     const [profile, setProfile] = useState(null);
     const [userRole, setUserRole] = useState(null); // 'student' | 'teacher' | 'company'
     const [authLoading, setAuthLoading] = useState(true);
+    const [authError, setAuthError] = useState(null); // Error al cargar el perfil
+    const [isNewUser, setIsNewUser] = useState(false); // Solo true si el doc de Firestore no existe
     const [projects, setProjects] = useState([]);
     const [opportunities, setOpportunities] = useState([]); // Nuevas vacantes
     const [users, setUsers] = useState({}); // Mapa de todos los usuarios por ID
@@ -53,81 +56,24 @@ function App() {
     // 0. Manejar estado de autenticación
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            setAuthError(null);
+            setIsNewUser(false);
             try {
                 setUser(currentUser);
                 if (currentUser) {
-                    const email = currentUser.email;
-                    const domain = email.substring(email.lastIndexOf("@"));
-
-                    // 1. Verificar roles en paralelo
-                    const [teacherSnap, companySnap] = await Promise.all([
-                        getDoc(doc(db, "whitelist_teachers", email)),
-                        getDoc(doc(db, "whitelist_companies", domain))
-                    ]);
-
-                    let assignedRole = 'student';
-                    if (teacherSnap.exists()) {
-                        assignedRole = 'teacher';
-                    } else if (companySnap.exists()) {
-                        if (domain === '@amigo.edu.co') {
-                            assignedRole = 'student';
-                        } else {
-                            assignedRole = 'company';
-                        }
-                    }
-
-                    // 2. Obtener y sincronizar perfil
+                    // Obtener perfil del usuario en Firestore
                     const userRef = doc(db, "users", currentUser.uid);
                     const docSnap = await getDoc(userRef);
 
                     if (docSnap.exists()) {
                         const userData = docSnap.data();
-                        let finalRole = userData.role || assignedRole;
-
-                        if (assignedRole === 'teacher' || assignedRole === 'company') {
-                            finalRole = assignedRole;
-                        }
-
-                        setUserRole(finalRole);
-
-                        const updates = {};
-                        if (userData.role !== finalRole) updates.role = finalRole;
-
-                        if (finalRole === 'company' && companySnap.exists()) {
-                            const companyName = companySnap.data().name;
-                            if (userData.name !== companyName) updates.name = companyName;
-                        } else if (finalRole === 'teacher' && teacherSnap.exists()) {
-                            const teacherName = teacherSnap.data().fullName;
-                            if (userData.name !== teacherName) updates.name = teacherName;
-                        }
-
-                        if (Object.keys(updates).length > 0) {
-                            await updateDoc(userRef, updates);
-                            Object.assign(userData, updates);
-                        }
-
+                        setUserRole(userData.role || 'student');
                         setProfile(userData);
-                    } else if (assignedRole !== 'student') {
-                        const whitelistData = assignedRole === 'teacher' ? teacherSnap.data() : companySnap.data();
-                        const initialProfile = {
-                            uid: currentUser.uid,
-                            name: assignedRole === 'teacher' ? whitelistData.fullName : whitelistData.name,
-                            mail: email,
-                            role: assignedRole,
-                            program: assignedRole === 'teacher' ? (whitelistData.faculty || "Facultad") : "Entidad Externa",
-                            avatarUrl: currentUser.photoURL || "",
-                            createdAt: new Date().toISOString(),
-                            dni: "S/N",
-                            favorites: [],
-                            description: assignedRole === 'company' ? "Empresa vinculada a AmigoConnect" : "",
-                            github: ""
-                        };
-                        await setDoc(userRef, initialProfile);
-                        setUserRole(assignedRole);
-                        setProfile(initialProfile);
                     } else {
+                        // Usuario nuevo → mostrar Onboarding para que elija su rol
                         setUserRole('student');
                         setProfile(null);
+                        setIsNewUser(true);
                     }
                 } else {
                     setProfile(null);
@@ -135,12 +81,15 @@ function App() {
                 }
             } catch (error) {
                 console.error("Error crítico en Auth Listener:", error);
+                setAuthError(error.code || error.message);
             } finally {
                 setAuthLoading(false);
             }
         });
         return () => unsubscribe();
     }, []);
+
+
 
     // 1. Escuchar Usuarios en tiempo real
     useEffect(() => {
@@ -369,6 +318,21 @@ function App() {
         }
     };
 
+    const handleDeleteProject = async (project) => {
+        if (!project) return;
+        const confirmed = window.confirm(`¿Seguro que quieres eliminar "${project.title}"? Esta acción no se puede deshacer.`);
+        if (!confirmed) return;
+        try {
+            const { deleteDoc } = await import('firebase/firestore');
+            await deleteDoc(doc(db, "projects", project.id));
+            setIsUploadModalOpen(false);
+            setEditingProject(null);
+        } catch (error) {
+            console.error("Error al eliminar proyecto:", error);
+            alert("No se pudo eliminar el proyecto. Intenta de nuevo.");
+        }
+    };
+
     const handleOppSubmit = async (e) => {
         e.preventDefault();
         const formData = new FormData(e.target);
@@ -423,8 +387,24 @@ function App() {
         return <Login />;
     }
 
-    if (user && !profile) {
-        return <Onboarding user={user} setProfile={setProfile} userRole={userRole} setUserRole={setUserRole} />;
+    // Error de Firestore al cargar perfil (no confundir con usuario nuevo)
+    if (authError) {
+        return (
+            <div className="loading-screen" style={{ flexDirection: 'column', gap: '1rem' }}>
+                <p style={{ color: '#f87171' }}>⚠️ Error al cargar tu perfil: {authError}</p>
+                <button
+                    className="submit-btn"
+                    style={{ maxWidth: 200 }}
+                    onClick={() => { setAuthError(null); setAuthLoading(true); window.location.reload(); }}
+                >
+                    Reintentar
+                </button>
+            </div>
+        );
+    }
+
+    if (user && isNewUser) {
+        return <Onboarding user={user} setProfile={setProfile} setIsNewUser={setIsNewUser} userRole={userRole} setUserRole={setUserRole} />;
     }
 
     return (
@@ -517,6 +497,7 @@ function App() {
                     setEditingProject={setEditingProject}
                     setIsUploadModalOpen={setIsUploadModalOpen}
                     handleProjectSubmit={handleProjectSubmit}
+                    handleDeleteProject={handleDeleteProject}
                     isUploading={isUploading}
                     projectCategories={projectCategories}
                     statuses={statuses}
