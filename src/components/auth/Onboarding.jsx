@@ -15,9 +15,13 @@ function Onboarding({ user, setProfile, setIsNewUser, userRole, setUserRole }) {
             mail: user.email,
             role: selectedRole,
             dni: formData.get('dni'),
+            phone: formData.get('phone') || "",
+            biography: formData.get('biography') || "",
             avatarUrl: user.photoURL || "",
             createdAt: new Date().toISOString(),
-            favorites: []
+            favorites: [],
+            technicalSkills: [], // Placeholder for competencias_tecnicas
+            academicExperience: [] // Placeholder for experiencia_academica
         };
 
         // Campos según rol
@@ -25,14 +29,21 @@ function Onboarding({ user, setProfile, setIsNewUser, userRole, setUserRole }) {
             newProfile.program = "Entidad Externa";
             newProfile.semester = "N/A";
             newProfile.github = formData.get('github') || "";
+            newProfile.portfolioWeb = formData.get('portfolioWeb') || "";
+            newProfile.linkedin = formData.get('linkedin') || "";
         } else if (selectedRole === 'teacher') {
             newProfile.program = formData.get('program'); // Facultad
             newProfile.semester = "N/A";
             newProfile.github = formData.get('github') || "";
+            newProfile.portfolioWeb = formData.get('portfolioWeb') || "";
+            newProfile.linkedin = formData.get('linkedin') || "";
         } else {
             newProfile.program = formData.get('program');
             newProfile.semester = Number(formData.get('semester')) || 1;
             newProfile.github = formData.get('github') || "";
+            newProfile.portfolioWeb = formData.get('portfolioWeb') || "";
+            newProfile.linkedin = formData.get('linkedin') || "";
+            newProfile.educationalLevel = formData.get('educationalLevel') || 'pregrado'; // pregrado, posgrado, egresado...
         }
 
         try {
@@ -60,18 +71,38 @@ function Onboarding({ user, setProfile, setIsNewUser, userRole, setUserRole }) {
                             <option value="company">Empresa / Reclutador</option>
                         </select>
                     </div>
-                    <div className="form-group">
-                        <label>DNI / Documento</label>
-                        <input type="text" name="dni" placeholder="Ej: 123456789" required />
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>DNI / Documento</label>
+                            <input type="text" name="dni" placeholder="Ej: 123456789" required />
+                        </div>
+                        <div className="form-group">
+                            <label>Teléfono (Opcional)</label>
+                            <input type="tel" name="phone" placeholder="Ej: 3001234567" />
+                        </div>
                     </div>
                     {(userRole === 'student' || userRole === 'graduate' || !userRole) && (
-                        <div className="form-group">
-                            <label>Programa Académico</label>
-                            <select name="program" required>
-                                <option value="">Selecciona tu carrera</option>
-                                <option value="Tecnología en Desarrollo de Software">Tecnología en Desarrollo de Software</option>
-                                <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
-                            </select>
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Programa Académico / Facultad</label>
+                                <select name="program" required>
+                                    <option value="">Selecciona tu carrera</option>
+                                    <option value="Tecnología en Desarrollo de Software">Tecnología en Desarrollo de Software</option>
+                                    <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
+                                    <option value="Administración">Administración</option>
+                                    <option value="Diseño">Diseño</option>
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Nivel de Estudios</label>
+                                <select name="educationalLevel" required>
+                                    <option value="pregrado">Pregrado</option>
+                                    <option value="posgrado">Posgrado</option>
+                                    <option value="egresado">Egresado</option>
+                                    <option value="maestria">Maestría</option>
+                                    <option value="doctorado">Doctorado</option>
+                                </select>
+                            </div>
                         </div>
                     )}
                     {userRole === 'teacher' && (
@@ -87,15 +118,29 @@ function Onboarding({ user, setProfile, setIsNewUser, userRole, setUserRole }) {
                                 <input type="number" name="semester" min="1" max="10" placeholder="1-10" required />
                             </div>
                         )}
+                    </div>
+                    <div className="form-group">
+                        <label>Biografía Breve</label>
+                        <textarea name="biography" rows="2" placeholder="Cuéntanos un poco sobre ti, tus habilidades y objetivos..."></textarea>
+                    </div>
+
+                    <div className="form-row">
                         <div className="form-group">
-                            <label>
-                                {userRole === 'company' ? 'Sitio Web / LinkedIn' :
-                                    userRole === 'teacher' ? 'Perfil Investigador / LinkedIn' : 'GitHub (Opcional)'}
-                            </label>
-                            <input type="text" name="github" placeholder="https://..." />
+                            <label>LinkedIn (Opcional)</label>
+                            <input type="url" name="linkedin" placeholder="https://linkedin.com/..." />
+                        </div>
+                        <div className="form-group">
+                            <label>GitHub (Opcional)</label>
+                            <input type="url" name="github" placeholder="https://github.com/..." />
                         </div>
                     </div>
-                    <button type="submit" className="submit-btn">Finalizar Registro</button>
+
+                    <div className="form-group">
+                        <label>Sitio Web o Portafolio (Opcional)</label>
+                        <input type="url" name="portfolioWeb" placeholder="https://mi-portafolio.com" />
+                    </div>
+
+                    <button type="submit" className="submit-btn" style={{ marginTop: '1rem' }}>Finalizar Registro</button>
                 </form>
             </div>
         </div>

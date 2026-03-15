@@ -14,7 +14,7 @@ export default function OpportunityCard({
                 onClick={(e) => { e.stopPropagation(); handleToggleFavorite(opp.id); }}
                 title="Añadir a favoritos"
             >
-                {profile?.favorites?.includes(opp.id) ? '⭐' : '☆'}
+                {profile?.favorites?.includes(opp.id) ? <Icons.StarFilled /> : <Icons.StarEmpty />}
             </button>
             <div className="opp-header">
                 <div className="company-logo-small">
@@ -27,10 +27,19 @@ export default function OpportunityCard({
             </div>
             <div className="opp-body">
                 <p>{opp.description}</p>
-                <div className="opp-tags">
+                {opp.academicReq && <p className="text-sm mt-2"><strong>Req. Académicos:</strong> {opp.academicReq}</p>}
+                {Array.isArray(opp.techReq) && opp.techReq.length > 0 && (
+                    <p className="text-sm mt-1"><strong>Skills:</strong> {opp.techReq.join(', ')}</p>
+                )}
+                {opp.benefits && <p className="text-sm mt-1"><strong>Beneficios:</strong> <span style={{ color: '#10b981' }}>{opp.benefits}</span></p>}
+                
+                <div className="opp-tags" style={{ marginTop: '10px' }}>
                     <span className="opp-tag">{opp.modality}</span>
                     <span className="opp-tag">{opp.type}</span>
-                    <span className="opp-tag">{opp.salary}</span>
+                    <span className="opp-tag">
+                        {opp.salaryMin ? `${opp.salaryMin}${opp.salaryMax ? ` - ${opp.salaryMax}` : ''} ${opp.currency}` : opp.salary || 'A convenir'}
+                    </span>
+                    {opp.deadline && <span className="opp-tag alert" style={{ background: '#fef08a', color: '#854d0e' }}>Cierra: {opp.deadline}</span>}
                 </div>
             </div>
             <div className="opp-footer">
@@ -38,9 +47,16 @@ export default function OpportunityCard({
                     <Icons.Mail /> <span>{opp.contact}</span>
                 </div>
                 {userRole === 'student' && (
-                    <button className="secondary-action-btn" onClick={() => window.open(opp.contact.startsWith('http') ? opp.contact : `mailto:${opp.contact}`)}>
-                        Postularme Ahora
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        {opp.urlVacante && (
+                            <button className="secondary-action-btn" onClick={() => window.open(opp.urlVacante, '_blank', 'noopener,noreferrer')}>
+                                Ver Oferta
+                            </button>
+                        )}
+                        <button className="primary-action-btn" onClick={() => window.open(opp.contact.startsWith('http') ? opp.contact : `mailto:${opp.contact}`)}>
+                            Aplicar
+                        </button>
+                    </div>
                 )}
 
                 {/* Validación de Vacantes (Docente/Coordinador) */}

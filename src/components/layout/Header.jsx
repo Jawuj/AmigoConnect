@@ -25,7 +25,10 @@ function Header({
             </div>
 
             <div className="header-nav">
-                <button className={`nav-link ${activeView === 'dashboard' ? 'active' : ''}`} onClick={goToDashboard}>Inicio</button>
+                {!user?.isAnonymous && (
+                    <button className={`nav-link ${activeView === 'my-projects' ? 'active' : ''}`} onClick={() => setActiveView('my-projects')}>Inicio</button>
+                )}
+                <button className={`nav-link ${activeView === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveView('dashboard')}>Proyectos</button>
                 <button className={`nav-link ${activeView === 'opportunities' ? 'active' : ''}`} onClick={() => setActiveView('opportunities')}>Oportunidades</button>
             </div>
 
@@ -35,17 +38,18 @@ function Header({
             </div>
 
             <div className="header-actions">
-                <div className="notification-wrapper">
-                    <button
-                        className={`icon-button ${unreadCount > 0 ? 'has-notifications' : ''}`}
-                        onClick={() => setIsNotifOpen(!isNotifOpen)}
-                        title="Notificaciones"
-                    >
-                        <Icons.Bell />
-                        {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
-                    </button>
+                {!user?.isAnonymous && (
+                    <div className="notification-wrapper">
+                        <button
+                            className={`icon-button ${unreadCount > 0 ? 'has-notifications' : ''}`}
+                            onClick={() => setIsNotifOpen(!isNotifOpen)}
+                            title="Notificaciones"
+                        >
+                            <Icons.Bell />
+                            {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+                        </button>
 
-                    {isNotifOpen && (
+                        {isNotifOpen && (
                         <div className="notification-dropdown">
                             <div className="notif-header">
                                 <h4>Notificaciones</h4>
@@ -75,8 +79,9 @@ function Header({
                         </div>
                     )}
                 </div>
+                )}
 
-                <div className="user-profile-info" onClick={handleProfileClick} title="Mi Perfil">
+                <div className="user-profile-info" onClick={!user?.isAnonymous ? handleProfileClick : null} title={user?.isAnonymous ? "Invitado" : "Mi Perfil"}>
                     <div className="user-profile-img">
                         {profile?.avatarUrl ? (
                             <img src={profile.avatarUrl} alt="Yo" />
@@ -85,7 +90,7 @@ function Header({
                         )}
                     </div>
                     <span className="user-profile-name">
-                        {profile ? profile.name.split(' ')[0] : user?.displayName?.split(' ')[0]}
+                        {user?.isAnonymous ? 'Invitado' : (profile ? profile.name.split(' ')[0] : user?.displayName?.split(' ')[0])}
                     </span>
                 </div>
                 <button className="icon-button" onClick={handleLogout} title="Cerrar sesión"><Icons.Logout /></button>

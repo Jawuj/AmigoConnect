@@ -1,4 +1,5 @@
 import React from 'react';
+import Icons from '../components/shared/Icons';
 
 export default function ProjectDetailsPage({
     project, author, profile,
@@ -24,6 +25,12 @@ export default function ProjectDetailsPage({
                             <span className={`status-badge ${project.approvalStatus}`}>
                                 {project.approvalStatus?.toUpperCase()}
                             </span>
+                            <span className="details-tag" style={{ border: 'none', background: 'transparent', padding: 0, gap: '4px', fontWeight: 'bold', color: '#64748b' }}>
+                                <Icons.Eye /> {project.views || 0}
+                            </span>
+                            <span className="details-tag" style={{ border: 'none', background: 'transparent', padding: 0, gap: '4px', fontWeight: 'bold', color: '#64748b' }}>
+                                <Icons.StarFilled /> {project.favoritesCount || 0}
+                            </span>
                         </div>
                         <h1>{project.title}</h1>
 
@@ -40,8 +47,15 @@ export default function ProjectDetailsPage({
 
                         <div className="details-description">
                             <h3>Sobre el proyecto</h3>
-                            <p>{project.problemSolved}</p>
+                            <p>{project.fullDescription || project.problemSolved}</p>
                         </div>
+
+                        {project.problemSolved && (
+                            <div className="details-description">
+                                <h3>Problema que Resuelve</h3>
+                                <p>{project.problemSolved}</p>
+                            </div>
+                        )}
 
                         {project.impactPotential && (
                             <div className="details-description highlight">
@@ -54,6 +68,13 @@ export default function ProjectDetailsPage({
                             <div className="details-description">
                                 <h3>Arquitectura Técnica</h3>
                                 <p>{project.techArchitecture}</p>
+                            </div>
+                        )}
+
+                        {project.targetAudience && (
+                            <div className="details-description">
+                                <h3>Público Objetivo</h3>
+                                <p>{project.targetAudience}</p>
                             </div>
                         )}
 
@@ -93,15 +114,34 @@ export default function ProjectDetailsPage({
                         </div>
 
                         {project.demoUrl && (
-                            <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="primary-action-btn" style={{ textDecoration: 'none', display: 'block', textAlign: 'center' }}>
-                                🚀 Ver Demo Online
+                            <a href={project.demoUrl} target="_blank" rel="noopener noreferrer" className="primary-action-btn" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '10px' }}>
+                                <Icons.Rocket /> Ver Demo Online
+                            </a>
+                        )}
+
+                        {project.sourceCodeUrl && (
+                            <a href={project.sourceCodeUrl} target="_blank" rel="noopener noreferrer" className="secondary-action-btn" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '10px' }}>
+                                <Icons.Code /> Código Fuente
+                            </a>
+                        )}
+
+                        {project.docsUrl && (
+                            <a href={project.docsUrl} target="_blank" rel="noopener noreferrer" className="secondary-action-btn" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '10px' }}>
+                                <Icons.FileText /> Documentación
+                            </a>
+                        )}
+
+                        {project.videoUrl && (
+                            <a href={project.videoUrl} target="_blank" rel="noopener noreferrer" className="secondary-action-btn" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '10px' }}>
+                                <Icons.Video /> Video Explicativo
                             </a>
                         )}
                         <button
                             className={`secondary-action-btn ${profile?.favorites?.includes(project.id) ? 'active' : ''}`}
                             onClick={() => handleToggleFavorite(project.id)}
+                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                         >
-                            {profile?.favorites?.includes(project.id) ? '⭐ Guardado' : '☆ Guardar en Favoritos'}
+                            {profile?.favorites?.includes(project.id) ? <><Icons.StarFilled /> Guardado</> : <><Icons.StarEmpty /> Guardar en Favoritos</>}
                         </button>
                     </div>
                 </aside>

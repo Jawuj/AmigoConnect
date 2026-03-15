@@ -33,7 +33,8 @@ export default function OpportunitiesPage({
                         <button
                             className={`view-tab ${activeOppTab === 'favorites' ? 'active' : ''}`}
                             onClick={() => setActiveOppTab('favorites')}
-                        >Mis Favoritas ⭐</button>
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >Mis Favoritas <Icons.StarFilled /></button>
                     </div>
                     {userRole === 'company' && (
                         <button className="primary-action-btn" onClick={() => setIsOppModalOpen(true)}>

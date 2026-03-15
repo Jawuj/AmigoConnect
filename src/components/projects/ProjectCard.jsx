@@ -20,7 +20,7 @@ export default function ProjectCard({
                 onClick={(e) => { e.stopPropagation(); handleToggleFavorite(project.id); }}
                 title="Añadir a favoritos"
             >
-                {profile?.favorites?.includes(project.id) ? '⭐' : '☆'}
+                {profile?.favorites?.includes(project.id) ? <Icons.StarFilled /> : <Icons.StarEmpty />}
             </button>
 
             <div
@@ -115,7 +115,15 @@ export default function ProjectCard({
                         {projectAuthor.program && <small className="author-program">{projectAuthor.program}</small>}
                     </div>
                 </div>
-                <span className="card-date">{project.status}</span>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                    <span title="Vistas" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Icons.Eye /> {project.views || 0}
+                    </span>
+                    <span title="Favoritos" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Icons.StarFilled /> {project.favoritesCount || 0}
+                    </span>
+                    <span className="card-date">{project.status}</span>
+                </div>
             </div>
         </article>
     );

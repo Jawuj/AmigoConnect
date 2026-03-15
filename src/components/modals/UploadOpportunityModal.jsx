@@ -16,35 +16,71 @@ export default function UploadOpportunityModal({
                         <input type="text" name="title" placeholder="Ej: Desarrollador Backend Junior" required />
                     </div>
                     <div className="form-group">
+                        <label>URL de la Vacante (Opcional)</label>
+                        <input type="url" name="urlVacante" placeholder="https://mi-empresa.com/vacante-xyz" />
+                    </div>
+                    <div className="form-group">
                         <label>Descripción de la Vacante</label>
-                        <textarea name="description" rows="4" placeholder="Describe los requisitos y responsabilidades..." required></textarea>
+                        <textarea name="description" rows="4" placeholder="Describe las responsabilidades..." required></textarea>
+                    </div>
+                    <div className="form-group">
+                        <label>Requisitos Académicos (Opcional)</label>
+                        <textarea name="academicReq" rows="2" placeholder="Ej: Estudiante de últimos semestres, recién egresado..."></textarea>
+                    </div>
+                    <div className="form-group">
+                        <label>Requisitos Técnicos (separados por coma)</label>
+                        <input type="text" name="techReq" placeholder="Ej: React, Node.js, SQL" />
+                    </div>
+                    <div className="form-group">
+                        <label>Beneficios (Opcional)</label>
+                        <textarea name="benefits" rows="2" placeholder="Ej: Medicina prepagada, gimnasio, equipo..."></textarea>
                     </div>
                     <div className="form-row">
                         <div className="form-group">
                             <label>Modalidad</label>
                             <select name="modality" required>
-                                <option value="Remoto">Remoto</option>
-                                <option value="Presencial">Presencial</option>
-                                <option value="Híbrido">Híbrido</option>
+                                <option value="remoto">Remoto</option>
+                                <option value="presencial">Presencial</option>
+                                <option value="hibrido">Híbrido</option>
                             </select>
                         </div>
                         <div className="form-group">
                             <label>Tipo</label>
                             <select name="type" required>
-                                <option value="Tiempo Completo">Tiempo Completo</option>
-                                <option value="Práctica / Pasantía">Práctica / Pasantía</option>
-                                <option value="Medio Tiempo">Medio Tiempo</option>
+                                <option value="practica">Práctica</option>
+                                <option value="empleo">Empleo</option>
+                                <option value="proyecto">Proyecto</option>
+                                <option value="pasantia">Pasantía</option>
+                                <option value="voluntariado">Voluntariado</option>
                             </select>
                         </div>
                     </div>
                     <div className="form-row">
                         <div className="form-group">
-                            <label>Salario Sugerido</label>
-                            <input type="text" name="salary" placeholder="Ej: 2.5M - 3.5M" required />
+                            <label>Salario Mínimo</label>
+                            <input type="number" step="0.01" name="salaryMin" placeholder="Ej: 2000000" />
                         </div>
+                        <div className="form-group">
+                            <label>Salario Máximo</label>
+                            <input type="number" step="0.01" name="salaryMax" placeholder="Ej: 3500000" />
+                        </div>
+                        <div className="form-group">
+                            <label>Moneda</label>
+                            <select name="currency" defaultValue="COP">
+                                <option value="COP">COP</option>
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div className="form-row">
                         <div className="form-group">
                             <label>Ubicación</label>
                             <input type="text" name="location" placeholder="Ciudad o Remoto" required />
+                        </div>
+                        <div className="form-group">
+                            <label>Fecha de Cierre (Opcional)</label>
+                            <input type="date" name="deadline" />
                         </div>
                     </div>
 

@@ -29,7 +29,11 @@ export default function ProfilePage({
                 github,
                 academicAverage,
                 technicalSkills,
-                softSkills
+                softSkills,
+                biography: formData.get('biography') || profile.biography || "",
+                phone: formData.get('phone') || profile.phone || "",
+                linkedin: formData.get('linkedin') || profile.linkedin || "",
+                portfolioWeb: formData.get('portfolioWeb') || profile.portfolioWeb || ""
             };
             await setDoc(doc(db, "users", user.uid), updatedProfile);
             setProfile(updatedProfile);
@@ -70,7 +74,18 @@ export default function ProfilePage({
                                 </div>
                                 <input type="text" name="technicalSkills" defaultValue={displayProfile?.technicalSkills?.join(', ')} placeholder="Habilidades Técnicas (separadas por coma)" />
                                 <input type="text" name="softSkills" defaultValue={displayProfile?.softSkills?.join(', ')} placeholder="Habilidades Blandas (separadas por coma)" />
-                                <input type="text" name="github" defaultValue={displayProfile?.github} placeholder="Link de Github" />
+                                
+                                <textarea name="biography" rows="3" defaultValue={displayProfile?.biography} placeholder="Biografía breve"></textarea>
+                                
+                                <div className="form-row">
+                                    <input type="tel" name="phone" defaultValue={displayProfile?.phone} placeholder="Teléfono" />
+                                    <input type="url" name="linkedin" defaultValue={displayProfile?.linkedin} placeholder="LinkedIn URL" />
+                                </div>
+                                <div className="form-row">
+                                    <input type="url" name="github" defaultValue={displayProfile?.github} placeholder="GitHub URL" />
+                                    <input type="url" name="portfolioWeb" defaultValue={displayProfile?.portfolioWeb} placeholder="Portafolio Web URL" />
+                                </div>
+                                
                                 <div className="form-actions-inline">
                                     <button type="submit" className="primary-action-btn"><Icons.Check /> Guardar Perfil Profesional</button>
                                     <button type="button" className="secondary-action-btn" onClick={() => setIsEditingProfile(false)}>Cancelar</button>
@@ -80,12 +95,32 @@ export default function ProfilePage({
                             <>
                                 <h1>{displayProfile?.name || (!isOwnProfile ? '' : user?.displayName)}</h1>
                                 <div className="profile-subtext">
-                                    {displayProfile?.program && <span><Icons.School /> {displayProfile?.program} {displayProfile?.semester ? `• Semestre ${displayProfile.semester}` : ''}</span>}
+                                    {displayProfile?.program && <span><Icons.School /> {displayProfile?.program} {displayProfile?.semester ? `• Semestre ${displayProfile.semester}` : ''} {displayProfile?.educationalLevel ? `(${displayProfile.educationalLevel})` : ''}</span>}
                                     {displayProfile?.academicAverage && <span className="badge-gpa">Promedio: {displayProfile.academicAverage}</span>}
                                     {(isOwnProfile || displayProfile?.mail) && <span><Icons.Mail /> {displayProfile?.mail || (isOwnProfile ? user?.email : '')}</span>}
+                                    {displayProfile?.phone && <span><Icons.Phone /> {displayProfile?.phone}</span>}
+                                </div>
+
+                                {displayProfile?.biography && (
+                                    <p className="profile-bio" style={{ marginTop: '1rem', fontStyle: 'italic', color: '#64748b' }}>
+                                        "{displayProfile.biography}"
+                                    </p>
+                                )}
+
+                                <div className="profile-links" style={{ display: 'flex', gap: '15px', marginTop: '1rem' }}>
+                                    {displayProfile?.linkedin && (
+                                        <a href={displayProfile.linkedin.startsWith('http') ? displayProfile.linkedin : `https://linkedin.com/in/${displayProfile.linkedin}`} target="_blank" rel="noopener noreferrer" className="profile-link">
+                                            LinkedIn
+                                        </a>
+                                    )}
                                     {displayProfile?.github && (
                                         <a href={displayProfile.github.startsWith('http') ? displayProfile.github : `https://github.com/${displayProfile.github}`} target="_blank" rel="noopener noreferrer" className="profile-link">
-                                            <Icons.Github /> Perfil Github
+                                            <Icons.Github /> GitHub
+                                        </a>
+                                    )}
+                                    {displayProfile?.portfolioWeb && (
+                                        <a href={displayProfile.portfolioWeb.startsWith('http') ? displayProfile.portfolioWeb : `https://${displayProfile.portfolioWeb}`} target="_blank" rel="noopener noreferrer" className="profile-link">
+                                            <Icons.Globe /> Portafolio
                                         </a>
                                     )}
                                 </div>
@@ -126,7 +161,7 @@ export default function ProfilePage({
                                 </div>
                             ) : displayProfile?.resumeUrl ? (
                                 <div>
-                                    <p>✅ Hoja de vida {isOwnProfile ? 'cargada correctamente' : 'disponible'}.</p>
+                                    <p style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Icons.Check /> Hoja de vida {isOwnProfile ? 'cargada correctamente' : 'disponible'}.</p>
                                     <a href={displayProfile.resumeUrl} target="_blank" rel="noopener noreferrer" className="resume-link">
                                         <Icons.External /> Ver documento {isOwnProfile ? 'actual' : ''}
                                     </a>

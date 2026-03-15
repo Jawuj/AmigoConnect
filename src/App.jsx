@@ -16,6 +16,7 @@ import ProfilePage from './pages/ProfilePage';
 import ProjectDetailsPage from './pages/ProjectDetailsPage';
 import UploadProjectModal from './components/modals/UploadProjectModal';
 import UploadOpportunityModal from './components/modals/UploadOpportunityModal';
+import Icons from './components/shared/Icons';
 
 function App() {
     const [activeMainFilter, setActiveMainFilter] = useState('Todos');
@@ -62,22 +63,31 @@ function App() {
                 setUser(currentUser);
                 if (currentUser) {
                     // Obtener perfil del usuario en Firestore
-                    const userRef = doc(db, "users", currentUser.uid);
-                    const docSnap = await getDoc(userRef);
-
-                    if (docSnap.exists()) {
-                        const userData = docSnap.data();
-                        setUserRole(userData.role || 'student');
-                        setProfile(userData);
-                    } else {
-                        // Usuario nuevo → mostrar Onboarding para que elija su rol
-                        setUserRole('student');
+                    if (currentUser.isAnonymous) {
+                        setUserRole('guest');
                         setProfile(null);
-                        setIsNewUser(true);
+                        setActiveView('dashboard');
+                    } else {
+                        const userRef = doc(db, "users", currentUser.uid);
+                        const docSnap = await getDoc(userRef);
+
+                        if (docSnap.exists()) {
+                            const userData = docSnap.data();
+                            setUserRole(userData.role || 'student');
+                            setProfile(userData);
+                            setActiveView('my-projects');
+                        } else {
+                            // Usuario nuevo → mostrar Onboarding para que elija su rol
+                            setUserRole('student');
+                            setProfile(null);
+                            setIsNewUser(true);
+                            setActiveView('dashboard');
+                        }
                     }
                 } else {
                     setProfile(null);
                     setUserRole(null);
+                    setActiveView('dashboard');
                 }
             } catch (error) {
                 console.error("Error crítico en Auth Listener:", error);
@@ -175,19 +185,26 @@ function App() {
 
             const projectData = {
                 title: formData.get('title'),
+                slug: formData.get('slug'),
                 mainFilter: formData.get('mainFilter') || 'Tecnología',
                 category: formData.get('category'),
+                shortDescription: formData.get('shortDescription'),
+                fullDescription: formData.get('fullDescription') || "",
                 problemSolved: formData.get('problemSolved'),
                 targetAudience: formData.get('targetAudience'),
                 techArchitecture: formData.get('techArchitecture'),
                 license: formData.get('license'),
-                team: formData.get('team'),
-                semester: Number(formData.get('semester')),
+                team: formData.get('team') || "",
                 status: formData.get('status'),
-                techStack: formData.get('techStack').split(',').map(item => item.trim()),
-                demoUrl: formData.get('demoUrl'),
+                techStack: formData.get('techStack') ? formData.get('techStack').split(',').map(item => item.trim()) : [],
+                demoUrl: formData.get('demoUrl') || "",
+                sourceCodeUrl: formData.get('sourceCodeUrl') || "",
+                docsUrl: formData.get('docsUrl') || "",
                 imageUrl: imageUrl,
-                maturityLevel: formData.get('maturityLevel'),
+                videoUrl: formData.get('videoUrl') || "",
+                estimatedPrice: formData.get('estimatedPrice') ? Number(formData.get('estimatedPrice')) : null,
+                businessModel: formData.get('businessModel') || "",
+                maturityLevel: formData.get('maturityLevel'), // Keeping this for backwards compatibility or filtering
                 impactPotential: formData.get('impactPotential'),
                 sector: formData.get('sector'),
                 tutorId: formData.get('tutorId') || "",
@@ -203,13 +220,15 @@ function App() {
                 projectData.createdAt = serverTimestamp();
                 projectData.isValidated = false;
                 projectData.approvalStatus = 'pending';
+                projectData.views = 0;
+                projectData.favoritesCount = 0;
                 const newDoc = await addDoc(collection(db, "projects"), projectData);
 
                 if (projectData.tutorId) {
                     await sendNotification(
                         projectData.tutorId,
                         `Nuevo proyecto pendiente de revisión: ${projectData.title}`,
-                        'project_approval',
+                        'sistema',
                         newDoc.id
                     );
                 }
@@ -244,7 +263,7 @@ function App() {
     };
 
     const handleToggleFavorite = async (itemId) => {
-        if (!user) return;
+        if (!user || user.isAnonymous) return;
         const currentFavorites = profile?.favorites || [];
         const isFavorite = currentFavorites.includes(itemId);
 
@@ -255,6 +274,16 @@ function App() {
 
             await updateDoc(doc(db, "users", user.uid), { favorites: newFavorites });
             setProfile({ ...profile, favorites: newFavorites });
+            
+            // Actualizar el conteo en el proyecto
+            const projectRef = doc(db, "projects", itemId);
+            const projSnap = await getDoc(projectRef);
+            if(projSnap.exists()) {
+                const currentCount = projSnap.data().favoritesCount || 0;
+                await updateDoc(projectRef, { 
+                    favoritesCount: isFavorite ? Math.max(0, currentCount - 1) : currentCount + 1 
+                });
+            }
         } catch (error) {
             console.error("Error al actualizar favoritos:", error);
         }
@@ -272,7 +301,7 @@ function App() {
                 await sendNotification(
                     project.authorId,
                     `¡Tu proyecto "${project.title}" ha sido aprobado!`,
-                    'approval_result',
+                    'sistema',
                     project.id
                 );
             }
@@ -309,7 +338,7 @@ function App() {
             await sendNotification(
                 project.authorId,
                 `Tu proyecto "${project.title}" requiere ajustes: ${reason}`,
-                'approval_result',
+                'sistema',
                 project.id
             );
             alert("Notificación de rechazo enviada");
@@ -339,16 +368,26 @@ function App() {
         try {
             const oppData = {
                 title: formData.get('title'),
+                urlVacante: formData.get('urlVacante') || "",
                 company: profile?.name || user.displayName,
                 companyId: user.uid,
                 description: formData.get('description'),
+                academicReq: formData.get('academicReq') || "",
+                techReq: formData.get('techReq') ? formData.get('techReq').split(',').map(s => s.trim()) : [],
+                benefits: formData.get('benefits') || "",
                 modality: formData.get('modality'),
                 type: formData.get('type'),
-                salary: formData.get('salary'),
+                salaryMin: formData.get('salaryMin') ? Number(formData.get('salaryMin')) : null,
+                salaryMax: formData.get('salaryMax') ? Number(formData.get('salaryMax')) : null,
+                currency: formData.get('currency') || 'COP',
                 location: formData.get('location'),
+                deadline: formData.get('deadline') || null,
                 contact: formData.get('contact'),
                 sector: profile?.program || "General",
                 approvalStatus: 'pending',
+                isActive: true, // instead of active/paused/closed enum for simplicity unless requested
+                views: 0,
+                applicationsCount: 0,
                 createdAt: serverTimestamp()
             };
             await addDoc(collection(db, "opportunities"), oppData);
@@ -370,9 +409,30 @@ function App() {
         setActiveView('profile');
     };
 
-    const handleProjectClick = (projectId) => {
+    const handleProjectClick = async (projectId) => {
         setSelectedProjectId(projectId);
         setActiveView('details');
+        
+        // Incrementar vistas de forma única a quien lo abre
+        try {
+            const projectRef = doc(db, "projects", projectId);
+            const projSnap = await getDoc(projectRef);
+            if(projSnap.exists()) {
+                const projData = projSnap.data();
+                const viewedBy = projData.viewedBy || [];
+                const viewerId = user?.uid;
+                
+                if (viewerId && !viewedBy.includes(viewerId)) {
+                    const currentViews = projData.views || 0;
+                    await updateDoc(projectRef, { 
+                        views: currentViews + 1,
+                        viewedBy: [...viewedBy, viewerId]
+                    });
+                }
+            }
+        } catch(error) {
+            console.error("Error al registrar la visualización:", error);
+        }
     };
 
     const goToDashboard = () => {
@@ -391,7 +451,11 @@ function App() {
     if (authError) {
         return (
             <div className="loading-screen" style={{ flexDirection: 'column', gap: '1rem' }}>
-                <p style={{ color: '#f87171' }}>⚠️ Error al cargar tu perfil: {authError}</p>
+                {authError && (
+                    <p style={{ color: '#f87171', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '20px' }}>
+                        <Icons.AlertTriangle /> Error al cargar tu perfil: {authError}
+                    </p>
+                )}
                 <button
                     className="submit-btn"
                     style={{ maxWidth: 200 }}
@@ -426,6 +490,8 @@ function App() {
 
             {activeView === 'dashboard' && (
                 <DashboardPage
+                    key="dashboard"
+                    title="Explorar Proyectos"
                     activeMainFilter={activeMainFilter} setActiveMainFilter={setActiveMainFilter} mainFilters={mainFilters}
                     activeSemester={activeSemester} setActiveSemester={setActiveSemester} semesters={semesters}
                     activeStatus={activeStatus} setActiveStatus={setActiveStatus} statuses={statuses}
@@ -448,6 +514,38 @@ function App() {
                     setActiveView={setActiveView}
                     resetFilters={resetFilters}
                 />
+            )}
+
+            {activeView === 'my-projects' && (
+                <div>
+                    <DashboardPage
+                        key="my-projects"
+                        title="Mis Proyectos"
+                        hideTabs={true}
+                        activeMainFilter={activeMainFilter} setActiveMainFilter={setActiveMainFilter} mainFilters={mainFilters}
+                        activeSemester={activeSemester} setActiveSemester={setActiveSemester} semesters={semesters}
+                        activeStatus={activeStatus} setActiveStatus={setActiveStatus} statuses={statuses}
+                        activeValidationFilter={activeValidationFilter} setActiveValidationFilter={setActiveValidationFilter}
+                        activeCategories={activeCategories} setActiveCategories={setActiveCategories} projectCategories={projectCategories}
+                        // Solo pasamos a DashboardPage los proyectos del usuario activo para que renderice con los mismos filtros
+                        activeProjectTab="all" setActiveProjectTab={() => {}}
+                        projects={projects.filter(p => p.authorId === user.uid)}
+                        userRole={userRole}
+                        user={user}
+                        profile={profile}
+                        users={users}
+                        handleProjectClick={handleProjectClick}
+                        handleToggleFavorite={handleToggleFavorite}
+                        handleApproveProject={handleApproveProject}
+                        handleRejectProject={handleRejectProject}
+                        handleToggleValidation={handleToggleValidation}
+                        setEditingProject={setEditingProject}
+                        setIsUploadModalOpen={setIsUploadModalOpen}
+                        setViewedUserId={setViewedUserId}
+                        setActiveView={setActiveView}
+                        resetFilters={resetFilters}
+                    />
+                </div>
             )}
 
             {activeView === 'opportunities' && (

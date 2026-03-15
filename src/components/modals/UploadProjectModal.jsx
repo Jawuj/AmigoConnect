@@ -14,7 +14,12 @@ export default function UploadProjectModal({
                 <form className="upload-form" onSubmit={handleProjectSubmit}>
                     <div className="form-group">
                         <label>Título del Proyecto/Producto</label>
-                        <input type="text" name="title" defaultValue={editingProject?.title} placeholder="Ej: AmigoConnect" required />
+                        <input type="text" name="title" defaultValue={editingProject?.title} placeholder="Ej: AmigoConnect" required maxLength="200" />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Slug (Identificador único)</label>
+                        <input type="text" name="slug" defaultValue={editingProject?.slug} placeholder="ej-amigo-connect" required maxLength="200" />
                     </div>
 
                     <div className="form-row">
@@ -41,8 +46,18 @@ export default function UploadProjectModal({
                     </div>
 
                     <div className="form-group">
-                        <label>Descripción del Proyecto (Resumen Ejecutivo)</label>
-                        <textarea name="problemSolved" rows="3" defaultValue={editingProject?.problemSolved} placeholder="Describe el impacto y valor de tu producto..." required></textarea>
+                        <label>Descripción Corta</label>
+                        <textarea name="shortDescription" rows="2" defaultValue={editingProject?.shortDescription || editingProject?.problemSolved} placeholder="Resumen rápido del proyecto (Max 500 chars)" required maxLength="500"></textarea>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Descripción Completa</label>
+                        <textarea name="fullDescription" rows="5" defaultValue={editingProject?.fullDescription} placeholder="Descripción detallada de todo el producto..."></textarea>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Problema que Resuelve</label>
+                        <textarea name="problemSolved" rows="3" defaultValue={editingProject?.problemSolved} placeholder="Describe el impacto y el problema que soluciona tu producto..." required></textarea>
                     </div>
 
                     <div className="form-group">
@@ -62,13 +77,26 @@ export default function UploadProjectModal({
                         <div className="form-group">
                             <label>Categoría</label>
                             <select name="category" defaultValue={editingProject?.category} required>
-                                {projectCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                <option value="web">Web</option>
+                                <option value="mobile">Mobile</option>
+                                <option value="escritorio">Escritorio</option>
+                                <option value="ia">IA</option>
+                                <option value="iot">IoT</option>
+                                <option value="cloud">Cloud</option>
+                                <option value="blockchain">Blockchain</option>
+                                <option value="videojuegos">Videojuegos</option>
+                                <option value="otros">Otros</option>
                             </select>
                         </div>
                         <div className="form-group">
-                            <label>Estado del Proyecto</label>
-                            <select name="status" defaultValue={editingProject?.status} required>
-                                {statuses.filter(s => s !== 'Todos').map(s => <option key={s} value={s}>{s}</option>)}
+                            <label>Estado de Desarrollo</label>
+                            <select name="status" defaultValue={editingProject?.status || editingProject?.maturityLevel} required>
+                                <option value="idea">Idea</option>
+                                <option value="en_desarrollo">En Desarrollo</option>
+                                <option value="mvp">MVP</option>
+                                <option value="terminado">Terminado</option>
+                                <option value="en_produccion">En Producción</option>
+                                <option value="abandonado">Abandonado</option>
                             </select>
                         </div>
                     </div>
@@ -76,15 +104,17 @@ export default function UploadProjectModal({
                     <div className="form-row">
                         <div className="form-group">
                             <label>Público Objetivo</label>
-                            <input type="text" name="targetAudience" defaultValue={editingProject?.targetAudience} placeholder="Ej: Niños, Empresas..." required />
+                            <input type="text" name="targetAudience" defaultValue={editingProject?.targetAudience} placeholder="Ej: Niños, Empresas..." required maxLength="200" />
                         </div>
                         <div className="form-group">
                             <label>Licencia</label>
-                            <select name="license" defaultValue={editingProject?.license || "MIT"}>
-                                <option value="MIT">MIT</option>
-                                <option value="GPL">GPL</option>
-                                <option value="Apache">Apache</option>
-                                <option value="Propietaria">Propietaria</option>
+                            <select name="license" defaultValue={editingProject?.license || "Pendiente"}>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="apache">Apache</option>
+                                <option value="gpl">GPL</option>
+                                <option value="proprietary">Propietaria</option>
+                                <option value="creative_commons">Creative Commons</option>
+                                <option value="otra">Otra</option>
                             </select>
                         </div>
                     </div>
@@ -101,22 +131,43 @@ export default function UploadProjectModal({
 
                     <div className="form-row">
                         <div className="form-group">
-                            <label>Semestre</label>
-                            <input type="number" name="semester" min="1" max="10" defaultValue={editingProject?.semester} placeholder="1-10" required />
+                            <label>Demo URL (Opcional)</label>
+                            <input type="url" name="demoUrl" defaultValue={editingProject?.demoUrl} placeholder="https://..." maxLength="500" />
                         </div>
                         <div className="form-group">
-                            <label>Demo URL (Opcional)</label>
-                            <input type="url" name="demoUrl" defaultValue={editingProject?.demoUrl} placeholder="https://..." />
+                            <label>URL Código Fuente (Opcional)</label>
+                            <input type="url" name="sourceCodeUrl" defaultValue={editingProject?.sourceCodeUrl} placeholder="https://github.com/..." maxLength="500" />
                         </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label>URL Documentación (Opcional)</label>
+                        <input type="url" name="docsUrl" defaultValue={editingProject?.docsUrl} placeholder="https://..." maxLength="500" />
                     </div>
 
                     <div className="form-group">
                         <label>Stack Tecnológico (separado por comas)</label>
-                        <input type="text" name="techStack" defaultValue={editingProject?.techStack?.join(', ')} placeholder="React, Node.js, Firebase" required />
+                        <input type="text" name="techStack" defaultValue={editingProject?.techStack?.join(', ')} placeholder="React, Node.js, Firebase..." />
+                    </div>
+
+                    <div className="form-row">
+                        <div className="form-group">
+                            <label>Video Explicativo URL (Opcional)</label>
+                            <input type="url" name="videoUrl" defaultValue={editingProject?.videoUrl} placeholder="https://youtube.com/..." maxLength="500" />
+                        </div>
+                        <div className="form-group">
+                            <label>Precio Estimado (Opcional)</label>
+                            <input type="number" step="0.01" name="estimatedPrice" defaultValue={editingProject?.estimatedPrice} placeholder="Ej: 19.99" />
+                        </div>
                     </div>
 
                     <div className="form-group">
-                        <label>Captura del Proyecto {editingProject ? '(Opcional si no cambias)' : '(Imagen)'}</label>
+                        <label>Modelo de Negocio (Opcional)</label>
+                        <textarea name="businessModel" rows="2" defaultValue={editingProject?.businessModel} placeholder="SaaS, B2B, B2C, Freemium..."></textarea>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Imagen de Portada {editingProject ? '(Opcional si no cambias)' : '(Requerida)'}</label>
                         <input type="file" name="image" accept="image/*" required={!editingProject} />
                     </div>
 

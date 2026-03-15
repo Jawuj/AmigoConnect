@@ -1,8 +1,11 @@
 import React from 'react';
 import Filters from '../components/projects/Filters';
 import ProjectList from '../components/projects/ProjectList';
+import Icons from '../components/shared/Icons';
 
 export default function DashboardPage({
+    title = "Explorar Proyectos",
+    hideTabs = false,
     activeMainFilter, setActiveMainFilter, mainFilters,
     activeSemester, setActiveSemester, semesters,
     activeStatus, setActiveStatus, statuses,
@@ -25,17 +28,20 @@ export default function DashboardPage({
             />
             <main className="main-content">
                 <div className="section-header">
-                    <h2 className="section-title">Explorar Proyectos</h2>
-                    <div className="view-tabs">
-                        <button
-                            className={`view-tab ${activeProjectTab === 'all' ? 'active' : ''}`}
-                            onClick={() => setActiveProjectTab('all')}
-                        >Todos</button>
-                        <button
-                            className={`view-tab ${activeProjectTab === 'favorites' ? 'active' : ''}`}
-                            onClick={() => setActiveProjectTab('favorites')}
-                        >Mis Favoritos ⭐</button>
-                    </div>
+                    <h2 className="section-title">{title}</h2>
+                    {!hideTabs && (
+                        <div className="view-tabs">
+                            <button
+                                className={`view-tab ${activeProjectTab === 'all' ? 'active' : ''}`}
+                                onClick={() => setActiveProjectTab('all')}
+                            >Todos</button>
+                            <button
+                                className={`view-tab ${activeProjectTab === 'favorites' ? 'active' : ''}`}
+                                onClick={() => setActiveProjectTab('favorites')}
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >Mis Favoritos <Icons.StarFilled /></button>
+                        </div>
+                    )}
                 </div>
 
                 <ProjectList

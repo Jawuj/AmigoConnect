@@ -1,7 +1,8 @@
 import React from 'react';
 import { auth, googleProvider, db } from "../../firebase";
-import { signInWithPopup, signOut } from "firebase/auth";
+import { signInWithPopup, signInAnonymously, signOut } from "firebase/auth";
 import { getDoc, doc } from "firebase/firestore";
+import Icons from '../shared/Icons';
 
 function Login() {
     const handleLogin = async () => {
@@ -31,6 +32,21 @@ function Login() {
             // El resto se maneja en el listener onAuthStateChanged
         } catch (error) {
             console.error("Error al iniciar sesión:", error);
+            alert("Error al acceder con Google.");
+        }
+    };
+
+    const handleGuestLogin = async () => {
+        try {
+            await signInAnonymously(auth);
+            // El listener en App.jsx lo manejará
+        } catch (error) {
+            console.error("Error al entrar como invitado:", error);
+            if (error.code === 'auth/admin-restricted-operation') {
+                alert("Debes ir a la consola de Firebase > Authentication > Sign-in method, y habilitar el inicio de sesión 'Anónimo'.");
+            } else {
+                alert("No se pudo entrar como invitado.");
+            }
         }
     };
 
@@ -44,9 +60,13 @@ function Login() {
                 </div>
                 <h1>Bienvenido a la red de proyectos</h1>
                 <p>Conéctate con otros estudiantes y comparte tu ingenio.</p>
-                <button className="google-login-btn" onClick={handleLogin}>
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/layout/google.png" alt="Google" />
+                <button className="google-login-btn" onClick={handleLogin} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <Icons.Google />
                     Entrar con cuenta institucional
+                </button>
+                <div style={{ margin: '15px 0', textAlign: 'center', color: '#64748b' }}>o</div>
+                <button className="secondary-action-btn" onClick={handleGuestLogin} style={{ width: '100%' }}>
+                    Entrar como Invitado
                 </button>
                 <footer className="login-footer">
                     AmigoConnect © 2026
