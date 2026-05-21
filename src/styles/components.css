@@ -1,0 +1,12 @@
+/*
+    Components Index
+    This file acts as a barrel to import all logical modular components,
+    created from the refactor of the monolithic components.css file.
+*/
+
+@import "./filters.css";
+@import "./projects.css";
+@import "./opportunities.css";
+@import "./modals.css";
+@import "./tabs.css";
+@import "./shared.css";

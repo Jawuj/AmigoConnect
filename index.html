@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/UniversityIcon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amigo Connect</title>
+    <script>
+      (function() {
+        try {
+          const theme = localStorage.getItem('theme');
+          if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.body.style.backgroundColor = '#0f172a'; // Match --bg-main in dark mode
+          } else {
+            document.body.style.backgroundColor = '#f4f7f6'; // Match --bg-main in light mode
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,210 @@
+.opportunities-view {
+    padding: 20px;
+    animation: fadeIn 0.4s ease;
+}
+
+.opps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+    justify-content: center;
+}
+
+.opp-card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--glass-border);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    height: 100%;
+}
+
+.opp-card.pending {
+    border: 2px dashed #ff9800;
+    background: rgba(255, 152, 0, 0.05);
+}
+
+.opp-card.rejected {
+    border: 2px solid #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.opp-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--primary-color);
+}
+
+.opp-approval-bar {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+.opp-approval-bar button {
+    flex: 1;
+    padding: 8px;
+    font-size: 0.85rem;
+}
+
+.opp-header {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.company-logo-small {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.opp-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.opp-company {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    display: block;
+}
+
+.opp-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.opp-desc {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text-main);
+    opacity: 0.95;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.opp-meta-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.opp-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+}
+
+.opp-meta-item svg {
+    flex-shrink: 0;
+    color: var(--primary-color);
+}
+
+.opp-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 5px 0;
+}
+
+.opp-tag {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    color: var(--primary-color);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.deadline-alert {
+    background: #fef08a !important;
+    color: #854d0e !important;
+    font-weight: 800;
+    border: 1px solid #facc15 !important;
+}
+
+.opp-footer {
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.opp-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.opp-actions button {
+    flex: 1;
+    white-space: nowrap;
+    padding: 8px 5px;
+    font-size: 0.8rem;
+}
+
+.opp-contact-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.opp-contact-info svg {
+    color: var(--primary-color);
+    opacity: 0.7;
+}
+
+.opportunities-view .primary-action-btn {
+    width: auto;
+    padding: 10px 24px;
+    font-size: 0.9rem;
+}
+
+.opportunities-view .section-header,
+.projects-view .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    gap: 20px;
+}

@@ -1,0 +1,145 @@
+.company-home-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    padding: 2rem;
+    gap: 3rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.company-welcome {
+    text-align: center;
+}
+
+.company-welcome h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-dark);
+}
+
+.company-welcome p {
+    font-size: 1.1rem;
+    color: var(--text-muted);
+}
+
+.selection-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    width: 100%;
+    max-width: 1200px;
+}
+
+.selection-card {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: 3rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.selection-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border-color: var(--primary-color);
+}
+
+.selection-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    font-size: 2rem;
+    color: white;
+}
+
+.selection-icon.red {
+    background: linear-gradient(135deg, #f87171, #dc2626);
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+}
+
+.selection-icon.green {
+    background: linear-gradient(135deg, #34d399, #059669);
+    box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+}
+
+.selection-icon.orange {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+}
+
+.selection-card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-dark);
+}
+
+.selection-card p {
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.selection-btn {
+    padding: 0.8rem 2rem;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+}
+
+.btn-red {
+    background: var(--error-color);
+    color: white;
+}
+
+.btn-red:hover {
+    background: #b91c1c;
+    transform: scale(1.02);
+}
+
+.btn-green {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-green:hover {
+    background: #047857;
+    transform: scale(1.02);
+}
+
+.btn-orange {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-orange:hover {
+    background: #d97706;
+    transform: scale(1.02);
+}
+
+@media (max-width: 768px) {
+    .selection-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .company-welcome h1 {
+        font-size: 2rem;
+    }
+}

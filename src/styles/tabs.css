@@ -1,0 +1,50 @@
+.view-tabs, .admin-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    padding: 4px;
+    border-radius: 30px;
+    border: 1px solid var(--glass-border);
+    width: fit-content;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    max-width: 100%;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.view-tabs::-webkit-scrollbar, .admin-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.view-tab, .admin-tab {
+    background: transparent;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 25px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: var(--text-muted);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 110px; /* Fixed width to prevent jumping */
+}
+
+.view-tab.active, .admin-tab.active {
+    background: var(--primary-color);
+    color: white;
+    /* Box-shadow removed to avoid illumination glow */
+}
+
+.view-tab:hover:not(.active), .admin-tab:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-main);
+}
+
