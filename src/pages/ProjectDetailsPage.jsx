@@ -22,7 +22,15 @@ export default function ProjectDetailsPage({
 
             <div className="details-grid">
                 <div className="details-main">
-                    <img src={project.imageUrl} alt={project.title} className="details-main-image" />
+                    <img 
+                        src={project.imageUrl || 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=1200'} 
+                        alt={project.title} 
+                        className="details-main-image" 
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=1200';
+                        }}
+                    />
                     <div className="details-content">
                         <div className="details-meta">
                             <span className="details-tag">Semestre {project.semester}</span>

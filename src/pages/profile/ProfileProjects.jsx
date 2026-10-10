@@ -19,7 +19,7 @@ export default function ProfileProjects({
             <div className="project-grid">
                 {filteredProjects.map(project => (
                     <article key={project.id} className="project-card" onClick={() => handleProjectClick(project.id)} style={{ cursor: 'pointer' }}>
-                        <div className="card-banner" style={{ backgroundImage: `url(${project.imageUrl})`, backgroundSize: 'cover' }}>
+                        <div className="card-banner" style={{ backgroundImage: `url(${project.imageUrl || 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=1200'})`, backgroundSize: 'cover' }}>
                             <div className="banner-badges">
                                 <span className="tag-semester">Semestre {project.semester}</span>
                             </div>

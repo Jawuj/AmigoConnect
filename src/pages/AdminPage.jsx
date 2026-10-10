@@ -190,6 +190,10 @@ export default function AdminPage({
             data.techStack = data.techStack.split(',').map(s => s.trim());
         }
 
+        if (!data.imageUrl) {
+            data.imageUrl = editingProject?.imageUrl || "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=1200";
+        }
+
         data.isModified = true;
 
         await handleAdminUpdateProject(editingProject.id, data);

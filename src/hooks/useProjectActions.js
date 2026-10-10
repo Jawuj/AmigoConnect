@@ -2,6 +2,29 @@ import { db, storage } from "../firebase";
 import { collection, doc, addDoc, updateDoc, getDoc, serverTimestamp, arrayUnion, arrayRemove, increment } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
+export const DEFAULT_PROJECT_IMAGES = {
+    Web: "https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&q=80&w=1200",
+    "Móvil": "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&q=80&w=1200",
+    Mobile: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&q=80&w=1200",
+    "IA": "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=1200",
+    AI: "https://images.unsplash.com/photo-1677442136019-21780ecad995?auto=format&fit=crop&q=80&w=1200",
+    IoT: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=1200",
+    Ciberseguridad: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80&w=1200",
+    "Data Science": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=1200",
+    "Diseño": "https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&q=80&w=1200",
+    Blockchain: "https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&q=80&w=1200",
+    "Educación": "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&q=80&w=1200",
+    Fintech: "https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&q=80&w=1200",
+    Sostenibilidad: "https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?auto=format&fit=crop&q=80&w=1200",
+    Cultural: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?auto=format&fit=crop&q=80&w=1200",
+    Social: "https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&q=80&w=1200",
+    default: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=1200"
+};
+
+export const getDefaultProjectImage = (category) => {
+    return DEFAULT_PROJECT_IMAGES[category] || DEFAULT_PROJECT_IMAGES.default;
+};
+
 export const useProjectActions = (user, profile, setProfile, userRole, users, showToast, customPrompt, customConfirm) => {
 
     const sendNotification = async (toUid, message, type, targetId) => {
@@ -27,13 +50,23 @@ export const useProjectActions = (user, profile, setProfile, userRole, users, sh
 
         const formData = new FormData(e.target);
         const imageFile = formData.get('image');
-        let imageUrl = editingProject?.imageUrl || "";
+        const inputImageUrl = formData.get('imageUrl')?.trim();
+        let imageUrl = inputImageUrl || editingProject?.imageUrl || "";
 
         try {
             if (imageFile && imageFile.size > 0) {
-                const storageRef = ref(storage, `project_images/${Date.now()}_${imageFile.name}`);
-                const snapshot = await uploadBytes(storageRef, imageFile);
-                imageUrl = await getDownloadURL(snapshot.ref);
+                try {
+                    const storageRef = ref(storage, `project_images/${Date.now()}_${imageFile.name}`);
+                    const snapshot = await uploadBytes(storageRef, imageFile);
+                    imageUrl = await getDownloadURL(snapshot.ref);
+                } catch (storageError) {
+                    console.warn("Firebase Storage no disponible (cuota excedida). Usando URL o imagen por defecto:", storageError);
+                }
+            }
+
+            const category = formData.get('category');
+            if (!imageUrl) {
+                imageUrl = getDefaultProjectImage(category);
             }
 
             const projectData = {

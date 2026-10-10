@@ -7,7 +7,23 @@ export default function UploadProjectModal({
     handleProjectSubmit, handleDeleteProject, isUploading, projectCategories, statuses, users,
     customConfirm, setActiveView
 }) {
+    const [imageUrlValue, setImageUrlValue] = useState(editingProject?.imageUrl || '');
     const [imagePreview, setImagePreview] = useState(editingProject?.imageUrl || null);
+
+    useEffect(() => {
+        setImageUrlValue(editingProject?.imageUrl || '');
+        setImagePreview(editingProject?.imageUrl || null);
+    }, [editingProject]);
+
+    const handleImageUrlChange = (e) => {
+        const val = e.target.value;
+        setImageUrlValue(val);
+        if (val.trim()) {
+            setImagePreview(val.trim());
+        } else {
+            setImagePreview(null);
+        }
+    };
 
     const handleAttemptClose = async () => {
         const confirmed = await customConfirm(
@@ -64,7 +80,7 @@ export default function UploadProjectModal({
                         <Icons.X />
                     </button>
                 </div>
-                
+
                 <form className="upload-form" onSubmit={handleProjectSubmit}>
                     <section className="modal-section">
                         <h3 className="section-title-modal">Información Básica</h3>
@@ -81,12 +97,12 @@ export default function UploadProjectModal({
                                 <label>Sector Económico</label>
                                 <CustomSelect name="sector" value={editingProject?.sector || ""} required
                                     options={[
-                                        {value: "", label: "Selecciona un sector"},
-                                        {value: "Tecnología", label: "Tecnología / Software"},
-                                        {value: "Salud", label: "Salud / Bienestar"},
-                                        {value: "Educación", label: "Educación / EdTech"},
-                                        {value: "Finanzas", label: "Finanzas / FinTech"},
-                                        {value: "Social", label: "Impacto Social"}
+                                        { value: "", label: "Selecciona un sector" },
+                                        { value: "Tecnología", label: "Tecnología / Software" },
+                                        { value: "Salud", label: "Salud / Bienestar" },
+                                        { value: "Educación", label: "Educación / EdTech" },
+                                        { value: "Finanzas", label: "Finanzas / FinTech" },
+                                        { value: "Social", label: "Impacto Social" }
                                     ]}
                                 />
                             </div>
@@ -165,46 +181,46 @@ export default function UploadProjectModal({
                         <div className="form-grid">
                             <div className="form-group">
                                 <label>Nivel de Madurez (TRL)</label>
-                                <CustomSelect name="maturityLevel" value={editingProject?.maturityLevel || "Concepto"} 
+                                <CustomSelect name="maturityLevel" value={editingProject?.maturityLevel || "Concepto"}
                                     options={[
-                                        {value: "Concepto", label: "Idea / Concepto"},
-                                        {value: "Investigación", label: "Investigación"},
-                                        {value: "Prototipo", label: "Prototipo Inicial"},
-                                        {value: "Validado", label: "Validado en Entorno"},
-                                        {value: "Mercado", label: "Listo para Mercado"}
+                                        { value: "Concepto", label: "Idea / Concepto" },
+                                        { value: "Investigación", label: "Investigación" },
+                                        { value: "Prototipo", label: "Prototipo Inicial" },
+                                        { value: "Validado", label: "Validado en Entorno" },
+                                        { value: "Mercado", label: "Listo para Mercado" }
                                     ]}
                                 />
                             </div>
                             <div className="form-group">
                                 <label>Estado de Desarrollo</label>
-                                <CustomSelect name="status" value={editingProject?.status || "active"} 
+                                <CustomSelect name="status" value={editingProject?.status || "active"}
                                     options={[
-                                        {value: "active", label: "En Desarrollo"},
-                                        {value: "completed", label: "Completado"},
-                                        {value: "paused", label: "Pausado"}
+                                        { value: "active", label: "En Desarrollo" },
+                                        { value: "completed", label: "Completado" },
+                                        { value: "paused", label: "Pausado" }
                                     ]}
                                 />
                             </div>
                             <div className="form-group">
                                 <label>Facultad / Programa</label>
-                                <CustomSelect name="program" value={editingProject?.program || "Tecnología"} 
+                                <CustomSelect name="program" value={editingProject?.program || "Tecnología"}
                                     options={[
-                                        {value: "Tecnología", label: "Facultad de Tecnología"},
-                                        {value: "Ingeniería", label: "Ingeniería de Sistemas"},
-                                        {value: "Diseño", label: "Diseño Gráfico"},
-                                        {value: "Administración", label: "Administración de Empresas"}
+                                        { value: "Tecnología", label: "Facultad de Tecnología" },
+                                        { value: "Ingeniería", label: "Ingeniería de Sistemas" },
+                                        { value: "Diseño", label: "Diseño Gráfico" },
+                                        { value: "Administración", label: "Administración de Empresas" }
                                     ]}
                                 />
                             </div>
                             <div className="form-group">
                                 <label>Categoría</label>
-                                <CustomSelect name="category" value={editingProject?.category || "Web"} 
+                                <CustomSelect name="category" value={editingProject?.category || "Web"}
                                     options={[
-                                        {value: "Web", label: "Desarrollo Web"},
-                                        {value: "Mobile", label: "App Móvil"},
-                                        {value: "IoT", label: "Hardware / IoT"},
-                                        {value: "AI", label: "Inteligencia Artificial"},
-                                        {value: "Other", label: "Otro"}
+                                        { value: "Web", label: "Desarrollo Web" },
+                                        { value: "Mobile", label: "App Móvil" },
+                                        { value: "IoT", label: "Hardware / IoT" },
+                                        { value: "AI", label: "Inteligencia Artificial" },
+                                        { value: "Other", label: "Otro" }
                                     ]}
                                 />
                             </div>
@@ -231,18 +247,36 @@ export default function UploadProjectModal({
                                 <input type="url" name="videoUrl" defaultValue={editingProject?.videoUrl} placeholder="https://youtube.com/watch?v=..." />
                             </div>
                             <div className="form-group full-width">
-                                <label>Imagen de Portada</label>
+                                <label>URL de Imagen de Portada</label>
+                                <input
+                                    type="url"
+                                    name="imageUrl"
+                                    value={imageUrlValue}
+                                    onChange={handleImageUrlChange}
+                                    placeholder="https://ejemplo.com/imagen.jpg (Opcional - dejar vacío para portada automática)"
+                                />
+                                <small style={{ color: 'var(--text-muted)', display: 'block', marginTop: '6px', fontSize: '0.8rem' }}>
+                                    💡 Puedes pegar un enlace directo de una imagen (Unsplash, ImgBB, etc.) o seleccionar un archivo abajo. Si lo dejas vacío, se asignará una portada de calidad según la categoría del proyecto.
+                                </small>
+                            </div>
+                            <div className="form-group full-width">
+                                <label>O seleccionar archivo de imagen (Opcional)</label>
                                 <label className="image-upload-area">
                                     <div className="image-upload-wrapper">
                                         {imagePreview ? (
-                                            <img src={imagePreview} alt="Preview" className="image-preview" />
+                                            <img
+                                                src={imagePreview}
+                                                alt="Preview"
+                                                className="image-preview"
+                                                onError={() => setImagePreview(null)}
+                                            />
                                         ) : (
                                             <div className="image-placeholder">
                                                 <Icons.Upload />
-                                                <span>Subir imagen de portada</span>
+                                                <span>Subir imagen o pegar una URL arriba</span>
                                             </div>
                                         )}
-                                        <input type="file" name="image" accept="image/*" required={!editingProject} onChange={handleImageChange} style={{display: 'none'}} />
+                                        <input type="file" name="image" accept="image/*" onChange={handleImageChange} style={{ display: 'none' }} />
                                     </div>
                                 </label>
                             </div>

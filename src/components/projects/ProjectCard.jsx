@@ -26,8 +26,8 @@ export default function ProjectCard({
             <div
                 className="card-banner"
                 style={{
-                    backgroundImage: project.imageUrl ? `url(${project.imageUrl})` : 'none',
-                    backgroundColor: project.imageUrl ? 'transparent' : '#e6b38a',
+                    backgroundImage: `url(${project.imageUrl || 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=1200'})`,
+                    backgroundColor: '#1e293b',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center'
                 }}>
